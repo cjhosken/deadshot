@@ -1,0 +1,67 @@
+{
+    "name": "deadshot-electron",
+    "version": "1.0.0",
+    "description": "Electon wrapper for Deadshot.",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron .",
+        "build": "electron-builder"
+    },
+    "keywords": [],
+    "author": "Christopher Hosken",
+    "license": "GPL-3.0-only",
+    "devDependencies": {
+        "electron": "^27.0.0",
+        "electron-builder": "^24.13.3"
+    },
+    "dependencies": {
+        "concurrently": "^8.2.0",
+        "electron-is-dev": "^3.0.1",
+        "wait-on": "^7.0.1"
+    },
+    "build": {
+        "appId": "cjhosken.deadshot",
+        "productName": "Deadshot",
+        "directories": {
+            "output": "../build/electron"
+        },
+        "files": [
+            "**/*",
+            "../build/frontend/**/*",
+            "../build/backend/**/*"
+        ],
+        "extraResources": [
+            {
+                "from": "../build/backend",
+                "to": "backend",
+                "filter": [
+                    "**/*"
+                ]
+            },
+            {
+                "from": "../build/frontend",
+                "to": "frontend",
+                "filter": [
+                    "**/*"
+                ]
+            }
+        ],
+        "win": {
+            "target": [
+                {
+                    "target": "portable",
+                    "arch": ["x64"]
+                }
+            ],
+            "icon": "../frontend/public/icon.ico"
+        },
+        "mac": {
+            "target": "dmg",
+            "icon": "../frontend/public/icon.icns"
+        },
+        "linux": {
+            "target": "AppImage",
+            "icon": "../frontend/public/icon.png"
+        }
+    }
+}
