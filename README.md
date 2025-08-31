@@ -1,12 +1,20 @@
-<div style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
-<img src="./frontend/public/icon.png" style="width:50%;"/>
+<p align="center">
+  <img src="./frontend/public/icon.png" alt="Deadshot Logo" width="200"/>
+</p>
 
-# Deadshot
-</div>
+<h1 align="center">Deadshot</h1>
 
-[![Linux](https://github.com/cjhosken/deadshot/actions/workflows/linux.yml/badge.svg?branch=main)](https://github.com/cjhosken/deadshot/actions/workflows/linux.yml)
-[![macOS](https://github.com/cjhosken/deadshot/actions/workflows/macos.yml/badge.svg)](https://github.com/cjhosken/deadshot/actions/workflows/macos.yml)
-[![Windows](https://github.com/cjhosken/deadshot/actions/workflows/windows.yml/badge.svg)](https://github.com/cjhosken/deadshot/actions/workflows/windows.yml)
+<p align="center">
+  <a href="https://github.com/cjhosken/deadshot/actions/workflows/linux.yml">
+    <img src="https://github.com/cjhosken/deadshot/actions/workflows/linux.yml/badge.svg?branch=main" alt="Linux Build"/>
+  </a>
+  <a href="https://github.com/cjhosken/deadshot/actions/workflows/macos.yml">
+    <img src="https://github.com/cjhosken/deadshot/actions/workflows/macos.yml/badge.svg" alt="macOS Build"/>
+  </a>
+  <a href="https://github.com/cjhosken/deadshot/actions/workflows/windows.yml">
+    <img src="https://github.com/cjhosken/deadshot/actions/workflows/windows.yml/badge.svg" alt="Windows Build"/>
+  </a>
+</p>
 
 ---
 
@@ -20,7 +28,15 @@ Deadshot is **free and open-source**, and can be used in both non-commercial and
 
 If you want to develop Deadshot yourself, follow the setup guide below.
 
-### 1. Setup Python Virtual Environment
+### 🔧 Prerequisites
+
+To develop Deadshot, you will need:
+
+- [Python](https://www.python.org/)
+- [Node.js & npm](https://nodejs.org/)
+
+### 🐍 Setup Python Virtual Environment
+
 Always work inside a virtual environment:
 
 ```bash
@@ -33,3 +49,40 @@ source .venv/bin/activate
 
 # On Windows:
 .\.venv\Scripts\Activate
+````
+
+### 📜 NPM Scripts
+
+* **Install dependencies**
+
+  ```bash
+  npm run install:all
+  ```
+
+  Installs all required Node.js modules and Python packages.
+  ⚠️ Make sure you’re inside your Python virtual environment first!
+
+* **Run development environment (with hot reloading)**
+
+  ```bash
+  npm run dev
+  ```
+
+* **Build Deadshot executable**
+
+  ```bash
+  npm run build
+  ```
+
+  Builds the Deadshot executable into `build/electron`.
+
+---
+
+## 📬 Contact & Information
+
+This application was written by **Christopher Hosken** for his Research & Development project at **Bournemouth University**.
+
+For inquiries about the project, you can reach him at:
+
+* 📧 [hoskenchristopher@gmail.com](mailto:hoskenchristopher@gmail.com)
+* 🔗 [LinkedIn](https://linkedin.com) *(placeholder — update with correct profile link)*
