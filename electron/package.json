@@ -1,5 +1,6 @@
 {
     "name": "electron-deadshot",
+    "version":"0.0.1",
     "description": "Electon wrapper for Deadshot.",
     "keywords": [],
     "author": "Christopher Hosken",

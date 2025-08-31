@@ -3,7 +3,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
 
-// Hardware acceleration is disabled for the time being due to GPU driver issues (Windows)
+// Hardware acceleration is disabled due to GPU initialization errors
 app.disableHardwareAcceleration();
 
 // Electron likes to throw security warnings for dev. This disables them.
