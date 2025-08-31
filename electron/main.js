@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 
 // Electron likes to throw security warnings for dev. This disables them.
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
@@ -112,6 +113,17 @@ ipcMain.on("set-window-title", (event, title) => {
     }
 });
 
+ipcMain.handle("open-external", async (event, url) => {
+    return shell.openExternal(url);
+});
+
+ipcMain.handle('get-os', async () => {
+    return {
+        platform: os.platform(),
+        arch: os.arch(),
+        release: os.release(),
+    };
+});
 
 // Execute when the app is ready.
 app.whenReady().then(() => {

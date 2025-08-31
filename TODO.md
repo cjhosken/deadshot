@@ -9,19 +9,16 @@
 - Mesh from Image?
 
 ## Workflows & CI
-- Get code checking
-- Create code check workflow
-- Create release publish workflow
+- Test publishing workflow
 
 ## Cross-Platform
-- Linux testing
-- MacOs testing
+- MacOS testing
 
 ## Frontend
-- ThreeJS setup
-- Styling
+- Workflow switching and behavior
+- styling viewport overlay visiblity panel
+- styling timeline
 
 ## Backend
-- USD (for exports)
 - COLMAP / GLOMAP (with CUDA?)
 - freemocap

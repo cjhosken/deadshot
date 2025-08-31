@@ -34,7 +34,7 @@ function App() {
       if (newSplit < 5) {
         setAppSplit(0);
       } else {
-        setAppSplit(5);
+        setAppSplit(4);
       }
     }
 
@@ -69,7 +69,7 @@ function App() {
       <div
         className='panel' 
         id='app-panel'
-        style={{ width: `${appSplit}%` }}
+        style={{ width: `${appSplit}em` }}
       >
         <MenuBar project={project} workflow={workflow} setWorkflow={setWorkflow}/>
       </div>

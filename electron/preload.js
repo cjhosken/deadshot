@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer, shell } = require("electron");
 
 contextBridge.exposeInMainWorld("electron", {
     showSaveDialog: (options) => {
@@ -8,4 +8,6 @@ contextBridge.exposeInMainWorld("electron", {
         return ipcRenderer.invoke("show-open-dialog", options);
     },
     setTitle: (title) => ipcRenderer.send("set-window-title", title),
+    openExternal: (url) => ipcRenderer.invoke('open-external', url),
+    getOS: () => ipcRenderer.invoke('get-os')
 });

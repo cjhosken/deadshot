@@ -1,18 +1,47 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import "./Viewport.css";
 import type Project from '../types/Project';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye } from '@fortawesome/free-regular-svg-icons';
 
 export default function Viewport({ project, workflow }: { project: Project, workflow: "mocap" | "track" }) {
     const mountRef = useRef<HTMLDivElement | null>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    const [showGrid, setShowGrid] = useState(true);
+
+    const [showVisibilityPanel, setShowVisibilityPanel] = useState(false);
+    const toggleVisibilityPanel = () => setShowVisibilityPanel(!showVisibilityPanel);
+
+    const gridRef = useRef<THREE.Mesh | null>(null);
+
+    useEffect(() => {
+        if (gridRef.current) {
+            gridRef.current.visible = showGrid;
+        }
+    }, [showGrid]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setShowVisibilityPanel(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     useEffect(() => {
         const mount = mountRef.current;
         if (!mount) return;
-        
+
         console.log(project);
         console.log(workflow);
 
@@ -89,9 +118,14 @@ export default function Viewport({ project, workflow }: { project: Project, work
                 scene.environment = texture;  // For reflections
             });
 
-        // Setup Grid
-        createGrid(scene);
 
+        
+        const grid = createGrid();
+        scene.add(grid);
+        gridRef.current = grid;
+        gridRef.current.visible = showGrid;
+        
+            
         // Test Geometry
         const loader = new GLTFLoader();
         loader.load(
@@ -141,7 +175,7 @@ export default function Viewport({ project, workflow }: { project: Project, work
             renderer.setScissorTest(false);
             renderer.render(scene, camera);
 
-            const size = 100; // axis size in pixels
+            const size = 50; // axis size in pixels
             const offset = new THREE.Vector3();
             offset.copy(camera.position).sub(controls.target).normalize();
             axisCamera.position.copy(offset);
@@ -150,8 +184,9 @@ export default function Viewport({ project, workflow }: { project: Project, work
             renderer.clearDepth();
 
             // Use renderer.domElement.clientWidth / clientHeight to scale
-            const left = 10;
-            const bottom = 10;
+            const left = 10;  // horizontal padding from left
+            const bottom = 10;   // vertical padding from top
+
             renderer.setViewport(left, bottom, size, size);
             renderer.setScissor(left, bottom, size, size);
             renderer.setScissorTest(true);
@@ -169,9 +204,9 @@ export default function Viewport({ project, workflow }: { project: Project, work
             mount.removeChild(renderer.domElement);
             renderer.dispose();
         }
-    }, [project, workflow])
+    })
 
-    function createGrid(scene: THREE.Scene) {
+    function createGrid() {
         const size = 1000;
         const divisions = 100;
 
@@ -223,12 +258,12 @@ export default function Viewport({ project, workflow }: { project: Project, work
         });
 
         const grid = new THREE.Mesh(geometry, material);
-        scene.add(grid);
+        return grid;
     }
 
     function createAxes(scene: THREE.Scene) {
         // Create X axis (red)
-        const xMat = new THREE.MeshBasicMaterial({ color: 0xbf212f });
+        const xMat = new THREE.MeshBasicMaterial({ color: 0xe65519 });
         const xGeom = new THREE.CylinderGeometry(0.02, 0.02, 0.8);
         const xArrow = new THREE.Mesh(xGeom, xMat);
         xArrow.position.set(0.4, 0, 0);
@@ -236,14 +271,14 @@ export default function Viewport({ project, workflow }: { project: Project, work
         scene.add(xArrow);
 
         // Create Y axis (green)
-        const yMat = new THREE.MeshBasicMaterial({ color: 0x006f3c });
+        const yMat = new THREE.MeshBasicMaterial({ color: 0x4daa57 });
         const yGeom = new THREE.CylinderGeometry(0.02, 0.02, 0.8);
         const yArrow = new THREE.Mesh(yGeom, yMat);
         yArrow.position.set(0, 0.4, 0);
         scene.add(yArrow);
 
         // Create Z axis (blue)
-        const zMat = new THREE.MeshBasicMaterial({ color: 0x264b96 });
+        const zMat = new THREE.MeshBasicMaterial({ color: 0x0971ec });
         const zGeom = new THREE.CylinderGeometry(0.02, 0.02, 0.8);
         const zArrow = new THREE.Mesh(zGeom, zMat);
         zArrow.position.set(0, 0, 0.4);
@@ -251,5 +286,49 @@ export default function Viewport({ project, workflow }: { project: Project, work
         scene.add(zArrow);
     }
 
-    return (<div className="viewport" ref={mountRef}/>);
+    return (
+        <div id="viewport">
+            <div id="canvas" ref={mountRef} />
+            <div id='viewport-overlay'>
+                <div id="visibility-wrapper" ref={wrapperRef} style={{ position: 'relative' }}>
+                    <button
+                        className="iconButton"
+                        onClick={toggleVisibilityPanel}
+                        title="Toggle visibility options"
+                    >
+                        <FontAwesomeIcon icon={faEye} />
+                    </button>
+
+                    {showVisibilityPanel && (
+                        <div id="visibility-panel">
+                            <label><input type="checkbox" id="show-grid" checked={showGrid} onClick={() => setShowGrid(!showGrid)}/>Grid</label>
+                            <label><input type="checkbox" id="show-debug-cameras" />Cameras</label>
+                            <label><input type="checkbox" id="show-clips" />Clips</label>
+                            {workflow === "mocap" ? (
+                                <>
+                                    <label><input type="checkbox" id="show-clips" />Rig</label>
+                                    <label><input type="checkbox" id="show-clips" />Geometry</label>
+                                </>
+                            ) : (
+                                <>
+                                    <label><input type="checkbox" id="show-clips" />Point Cloud</label>
+                                    <label><input type="checkbox" id="show-clips" />Debug Cameras</label>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
+                <select id="camera-select">
+                    <option> persp </option>
+                </select>
+            </div>
+            <div id="timeline">
+                <div id="timeline-track">
+                    <div id="timeline-playhead" />
+                    <div className="timeline-keyframe" style={{ left: '25%' }}></div>
+                    <div className="timeline-keyframe" style={{ left: '50%' }}></div>
+                </div>
+            </div>
+        </div>
+    );
 }

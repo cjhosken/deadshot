@@ -13,33 +13,9 @@
 
 .split-handle {
     width: 3px;
-    background: #444;
+    background: var(--grey);
     cursor: col-resize;
     user-select: none;
-}
-
-.popup-overlay {
-    left: 0;
-    top: 0;
-    width: 100vw;
-    height: 100vh;
-    position: fixed;
-    backdrop-filter: blur(5px);
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.popup {
-    height: 80%;
-    width: 80%;
-    padding: 1em;
-    display: flex;
-    flex-direction: column;
-    background-color: #131313;
-    border-radius: 15px;
 }
 
 #app-panel {
@@ -56,17 +32,14 @@
     font-size: 1em;
     background-color: transparent;
     border: none;
+    transition: color ease 0.35s;
 }
 
 .iconButton:hover {
     cursor: pointer;
+    color: var(--primary-light);
 }
 
 .iconButton.active {
-    color: green;
-}
-
-.textButton {
-    height: 50%;
-    background-color: red;
+    color: var(--primary);
 }
