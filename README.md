@@ -5,13 +5,13 @@
 <h1 align="center">Deadshot</h1>
 
 <p align="center">
-  <a href="https://github.com/cjhosken/deadshot/actions/workflows/linux.yml">
+  <a href="https://github.com/cjhosken/deadshot/actions/workflows/linux.yml" style="text-decoration: none;">
     <img src="https://github.com/cjhosken/deadshot/actions/workflows/linux.yml/badge.svg?branch=main" alt="Linux Build"/>
   </a>
-  <a href="https://github.com/cjhosken/deadshot/actions/workflows/macos.yml">
+  <a href="https://github.com/cjhosken/deadshot/actions/workflows/macos.yml" style="text-decoration: none;">
     <img src="https://github.com/cjhosken/deadshot/actions/workflows/macos.yml/badge.svg" alt="macOS Build"/>
   </a>
-  <a href="https://github.com/cjhosken/deadshot/actions/workflows/windows.yml">
+  <a href="https://github.com/cjhosken/deadshot/actions/workflows/windows.yml" style="text-decoration: none;">
     <img src="https://github.com/cjhosken/deadshot/actions/workflows/windows.yml/badge.svg" alt="Windows Build"/>
   </a>
 </p>
