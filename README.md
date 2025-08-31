@@ -5,10 +5,10 @@
 <h1 align="center">Deadshot</h1>
 
 <p align="center">
-<img src="https://github.com/cjhosken/deadshot/actions/workflows/linux.yml/badge.svg?branch=main" alt="Linux Build"/>
-<img src="https://github.com/cjhosken/deadshot/actions/workflows/macos.yml/badge.svg" alt="macOS Build"/>
-<img src="https://github.com/cjhosken/deadshot/actions/workflows/windows.yml/badge.svg" alt="Windows Build"/>
-<img src="https://github.com/cjhosken/deadshot/actions/workflows/check.yml/badge.svg" alt="Checks"/>
+<a href="https://github.com/cjhosken/deadshot/actions/workflows/linux.yml"><img src="https://github.com/cjhosken/deadshot/actions/workflows/linux.yml/badge.svg?branch=main" alt="Linux Build"/> </a>
+<a href="https://github.com/cjhosken/deadshot/actions/workflows/windows.yml"><img src="https://github.com/cjhosken/deadshot/actions/workflows/windows.yml/badge.svg" alt="Windows Build"/></a>
+<a href="https://github.com/cjhosken/deadshot/actions/workflows/macos.yml"><img src="https://github.com/cjhosken/deadshot/actions/workflows/macos.yml/badge.svg" alt="macOS Build"/></a>
+<a href="https://github.com/cjhosken/deadshot/actions/workflows/check.yml"><img src="https://github.com/cjhosken/deadshot/actions/workflows/check.yml/badge.svg" alt="Checks"/></a>
 </p>
 
 ---
