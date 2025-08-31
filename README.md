@@ -79,4 +79,4 @@ This application was written by **Christopher Hosken** for his Research & Develo
 For inquiries about the project, you can reach him at:
 
 * 📧 [hoskenchristopher@gmail.com](mailto:hoskenchristopher@gmail.com)
-* 🔗 [LinkedIn](https://linkedin.com) *(placeholder — update with correct profile link)*
+* 🔗 [LinkedIn (christopher-hosken)](https://www.linkedin.com/in/christopher-hosken/)
