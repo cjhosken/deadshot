@@ -1,4 +1,8 @@
+<div style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
+<img src="./frontend/public/icon.png"/>
+
 # Deadshot
+</div>
 
 [![Linux](https://github.com/cjhosken/deadshot/actions/workflows/linux.yml/badge.svg?branch=main)](https://github.com/cjhosken/deadshot/actions/workflows/linux.yml)
 [![macOS](https://github.com/cjhosken/deadshot/actions/workflows/macos.yml/badge.svg)](https://github.com/cjhosken/deadshot/actions/workflows/macos.yml)
