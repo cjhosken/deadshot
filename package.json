@@ -1,6 +1,5 @@
 {
     "name": "deadshot",
-    "version": "1.0.0",
     "scripts": {
         "install:all": "npm install && npm run install:backend && npm run install:frontend && npm run install:electron",
         "install:backend": "cd backend && pip install -r requirements.txt",
