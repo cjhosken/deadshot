@@ -12,11 +12,11 @@
         "check": "eslint . --ext .ts,.tsx,.js"
     },
     "devDependencies": {
+        "eslint": "^9.34.0",
         "electron": "37.4.0",
         "electron-builder": "26.0.12"
     },
     "dependencies": {
-        "@eslint/js": "^9.33.0",
         "concurrently": "^9.2.1",
         "wait-on": "^8.0.4"
     },
