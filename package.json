@@ -13,7 +13,12 @@
         "build": "npm-run-all build:backend build:frontend build:electron --sequential",
         "build:frontend": "cd frontend && npm run build",
         "build:backend": "cd backend && python build.py",
-        "build:electron": "cd electron && npm run build"
+        "build:electron": "cd electron && npm run build",
+        "check": "npm-run-all check:backend check:frontend check:electron",
+        "check:backend": "cd backend",
+        "check:frontend": "cd frontend && npm run check",
+        "check:electron": "cd electron && npm run check"
+
     },
     "devDependencies": {
         "concurrently": "^9.2.1",

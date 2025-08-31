@@ -8,7 +8,8 @@
     "main": "main.js",
     "scripts": {
         "start": "electron .",
-        "build": "npx electron-builder"
+        "build": "npx electron-builder",
+        "check": ""
     },
     "devDependencies": {
         "electron": "37.4.0",
