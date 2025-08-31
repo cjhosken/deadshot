@@ -14,7 +14,7 @@ const isDev = () => {
     return process.env.NODE_ENV === "development" ||
         process.defaultApp ||
         /[\\/]electron[\\/]/.test(process.execPath);
-}
+};
 
 let mainWindow;
 let pythonProcess = null;
@@ -131,4 +131,4 @@ app.on('before-quit', () => {
         pythonProcess.kill();
         pythonProcess = null;
     }
-})
+});

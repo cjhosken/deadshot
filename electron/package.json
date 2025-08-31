@@ -9,15 +9,14 @@
     "scripts": {
         "start": "electron .",
         "build": "npx electron-builder --publish always",
-        "check": "npm run lint && npm run typecheck",
-        "lint": "eslint . --ext .ts,.tsx,.js",
-        "typecheck": "tsc --noEmit"
+        "check": "eslint . --ext .ts,.tsx,.js"
     },
     "devDependencies": {
         "electron": "37.4.0",
         "electron-builder": "26.0.12"
     },
     "dependencies": {
+        "@eslint/js": "^9.33.0",
         "concurrently": "^9.2.1",
         "wait-on": "^8.0.4"
     },
@@ -51,7 +50,7 @@
         "win": {
             "target": "portable",
             "icon": "../frontend/public/icon.ico",
-            "artifactName":"Deadshot.exe"
+            "artifactName": "Deadshot.exe"
         },
         "mac": {
             "target": "dmg",
