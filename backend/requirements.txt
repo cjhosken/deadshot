@@ -2,3 +2,4 @@ fastapi==0.116.1
 uvicorn==0.35.0
 pyinstaller==6.15.0
 ruff==0.12.11
+usd-core==25.8

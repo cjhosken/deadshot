@@ -46,7 +46,7 @@ def build_backend():
 
     # remove any files and folders that start with "_'.
     for item in os.listdir(build_dir):
-        if item.startswith("_"):
+        if item.startswith("_") or item.startswith("."):
             item_path = os.path.join(build_dir, item)
             if os.path.isdir(item_path):
                 shutil.rmtree(item_path)
