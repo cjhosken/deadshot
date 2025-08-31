@@ -1,0 +1,13 @@
+#menuBar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: white;
+}
+
+.seperator {
+    margin: 2em 0em;
+    width: 80%;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.25);
+}

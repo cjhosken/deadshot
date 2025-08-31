@@ -1,10 +1,7 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
-
-// Hardware acceleration is disabled due to GPU initialization errors
-app.disableHardwareAcceleration();
 
 // Electron likes to throw security warnings for dev. This disables them.
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
@@ -45,15 +42,19 @@ function createWindow() {
         width: 1200,
         height: 800,
         webPreferences: {
-            nodeIntegeration: false,
+            nodeIntegration: false,
             contextIsolation: true,
             enableRemoteModule: false,
             allowRunningInsecureContent: false,
             preload: path.join(__dirname, "preload.js"),
         },
+        autoHideMenuBar: true,
         icon: path.join(__dirname, "../frontend/public/icon.png"),
         show: false
     });
+
+    //mainWindow.setMenu(null);
+
 
     // In development mode, the frontend is running on a localhost port. 
     // In production, the frontend is a .html file.
@@ -95,6 +96,22 @@ async function startBackend() {
         console.log(`Python process exited with code ${code}`);
     });
 }
+
+ipcMain.handle('show-save-dialog', async (event, options) => {
+    return await dialog.showSaveDialog(options);
+});
+
+ipcMain.handle("show-open-dialog", async (event, options) => {
+    return await dialog.showOpenDialog(options);
+});
+
+ipcMain.on("set-window-title", (event, title) => {
+    const window = BrowserWindow.getFocusedWindow();
+    if (window) {
+        window.setTitle(title);
+    }
+});
+
 
 // Execute when the app is ready.
 app.whenReady().then(() => {

@@ -13,7 +13,7 @@
 
 ---
 
-**Deadshot** is an open-source **SFM** and **AI-based camera tracking and motion capture** software.
+**Deadshot** is an open-source **SfM** and **AI-based camera tracking and motion capture** software.
 
 ---
 

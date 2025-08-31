@@ -1,69 +1,108 @@
-import { useState, useEffect } from 'react'
-import axios from 'axios'
+import { useState, useRef, useEffect } from 'react'
 import './App.css'
+import Viewport from './components/Viewport'
+import Workflow from './components/Workflow'
+import Project from './types/Project'
+import MenuBar from './components/MenuBar'
 
-
-// We set a base API for the python backend.
-const API_BASE_URL = 'http://localhost:8000'
+export const BACKEND_API_ADDRESS="http://localhost:8000";
 
 function App() {
-  const [items, setItems] = useState<string[]>([])
-  const [newItem, setNewItem] = useState('')
-  const [message, setMessage] = useState('')
+  const project = new Project("");
+  const [workflow, setWorkflow] = useState<"mocap" | "track">("mocap");
+
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  const [appSplit, setAppSplit] = useState(5) // App panel width %
+  const [viewportSplit, setViewportSplit] = useState(60) // Viewport width %
+
+  const isDraggingApp = useRef(false)
+  const isDraggingViewport = useRef(false)
+
+  // Start dragging handlers
+  const handleMouseDownApp = () => { isDraggingApp.current = true }
+  const handleMouseDownViewport = () => { isDraggingViewport.current = true }
+
+  // Mouse move handler for both directions
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+
+    // Horizontal (app panel)
+    if (isDraggingApp.current) {
+      const newSplit = ((e.clientX - rect.left) / rect.width) * 100
+      if (newSplit < 5) {
+        setAppSplit(0);
+      } else {
+        setAppSplit(5);
+      }
+    }
+
+    // Horizontal (viewport)
+    if (isDraggingViewport.current) {
+      const newSplit = ((e.clientX - rect.left) / rect.width) * 100
+      if (newSplit < 80) {
+        setViewportSplit(60);
+      } else  {
+        setViewportSplit(100); 
+      }
+    }
+  }
+
+  const handleMouseUp = () => {
+    isDraggingApp.current = false
+    isDraggingViewport.current = false
+  }
 
   useEffect(() => {
-    fetchItems()
-  }, [])
-
-  const fetchItems = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/items`)
-      setItems(response.data.items)
-    } catch (error) {
-      console.error('Error fetching items:', error)
-      setMessage('Failed to fetch items')
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
     }
-  }
-
-  const addItem = async () => {
-    if (!newItem.trim()) return
-    
-    try {
-      const response = await axios.post(`${API_BASE_URL}/api/items`, { 
-        name: newItem,
-        timestamp: new Date().toISOString()
-      })
-      setMessage(response.data.message)
-      setNewItem('')
-      fetchItems() // Refresh the list
-    } catch (error) {
-      console.error('Error adding item:', error)
-      setMessage('Failed to add item')
-    }
-  }
+  }, [appSplit, viewportSplit])
 
   return (
-    <div className="App">
-      <h1>Cross-Platform App</h1>
-      <div className="card">
-        <input
-          type="text"
-          value={newItem}
-          onChange={(e) => setNewItem(e.target.value)}
-          placeholder="Enter new item"
-        />
-        <button onClick={addItem}>
-          Add Item
-        </button>
-        
-        <h2>Items from Python Backend:</h2>
-        <ul>
-          {items.map((item, index) => (
-            <li key={index}>{item}</li>
-          ))}
-        </ul>
-        
-        {message && <p>{message}</p>}
+    <div id="root" ref={containerRef}>
+      {/* APPBAR */}
+      <div
+        className='panel' 
+        id='app-panel'
+        style={{ width: `${appSplit}%` }}
+      >
+        <MenuBar project={project} workflow={workflow} setWorkflow={setWorkflow}/>
+      </div>
+
+      {/* RESIZER: App / Viewport */}
+      <div
+        className="split-handle"
+        onMouseDown={handleMouseDownApp}
+      />
+
+
+      {/* VIEWPORT */}
+      <div
+        className="panel" 
+        id="viewport-panel"
+        style={{ width: `${viewportSplit}%` }}
+      >
+        <Viewport project={project} workflow={workflow}/>
+      </div>
+
+      {/* VIEWPORT RESIZER */}
+      <div
+        className="split-handle"
+        onMouseDown={handleMouseDownViewport}
+      />
+
+      {/* WORKFLOW */}
+      <div
+        className="panel"
+        id="workflow-panel"
+        style={{ width: `${100 - viewportSplit}%` }}
+      >
+        <Workflow project={project} workflow={workflow}/>
       </div>
     </div>
   )
