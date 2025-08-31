@@ -1,7 +1,7 @@
 # Deadshot
 
 [![linux](https://github.com/cjhosken/deadshot/actions/workflows/linux.yml/badge.svg?branch=main)](https://github.com/cjhosken/deadshot/actions/workflows/linux.yml)
-[![windows](https://github.com/cjhosken/deadshot/actions/workflows/mac.yml/badge.svg)](https://github.com/cjhosken/deadshot/actions/workflows/mac.yml)
+[![macos](https://github.com/cjhosken/deadshot/actions/workflows/macos.yml/badge.svg)](https://github.com/cjhosken/deadshot/actions/workflows/macos.yml)
 [![macos](https://github.com/cjhosken/deadshot/actions/workflows/windows.yml/badge.svg)](https://github.com/cjhosken/deadshot/actions/workflows/windows.yml)
 
 
