@@ -8,8 +8,10 @@
     "main": "main.js",
     "scripts": {
         "start": "electron .",
-        "build": "npx electron-builder",
-        "check": ""
+        "build": "npx electron-builder --publish always",
+        "check": "npm run lint && npm run typecheck",
+        "lint": "eslint . --ext .ts,.tsx,.js",
+        "typecheck": "tsc --noEmit"
     },
     "devDependencies": {
         "electron": "37.4.0",
@@ -47,21 +49,19 @@
             }
         ],
         "win": {
-            "target": [
-                {
-                    "target": "portable",
-                    "arch": ["x64"]
-                }
-            ],
-            "icon": "../frontend/public/icon.ico"
+            "target": "portable",
+            "icon": "../frontend/public/icon.ico",
+            "artifactName":"Deadshot.exe"
         },
         "mac": {
             "target": "dmg",
-            "icon": "../frontend/public/icon.icns"
+            "icon": "../frontend/public/icon.icns",
+            "artifactName": "Deadshot.dmg"
         },
         "linux": {
             "target": "AppImage",
-            "icon": "../frontend/public/icon.png"
+            "icon": "../frontend/public/icon.png",
+            "artifactName": "Deadshot.AppImage"
         }
     }
 }

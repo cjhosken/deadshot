@@ -5,7 +5,7 @@
         "install:all": "npm install && npm run install:backend && npm run install:frontend && npm run install:electron",
         "install:backend": "cd backend && pip install -r requirements.txt",
         "install:frontend": "cd frontend && npm install",
-        "install:electron": "cd electron & npm install",
+        "install:electron": "cd electron && npm install",
         "dev": "concurrently -k \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:electron\"",
         "dev:backend": "cd backend && python -m uvicorn main:app --reload",
         "dev:frontend": "cd frontend && npm run dev",
@@ -15,7 +15,7 @@
         "build:backend": "cd backend && python build.py",
         "build:electron": "cd electron && npm run build",
         "check": "npm-run-all check:backend check:frontend check:electron",
-        "check:backend": "cd backend",
+        "check:backend": "cd backend && ruff check",
         "check:frontend": "cd frontend && npm run check",
         "check:electron": "cd electron && npm run check"
 

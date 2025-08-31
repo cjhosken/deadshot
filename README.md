@@ -74,7 +74,7 @@ source .venv/bin/activate
 
 ## 📬 Contact & Information
 
-This application was written by **Christopher Hosken** for his Research & Development project at **Bournemouth University**.
+Deadshot was written by **Christopher Hosken** for his Research & Development project at **Bournemouth University**.
 
 For inquiries about the project, you can reach him at:
 

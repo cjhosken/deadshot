@@ -1,0 +1,34 @@
+name: Code Quality Checks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Python for backend
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Node for frontend/electron
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # deps
+      - name: Install dependencies
+        run: npm run install:all
+
+      # Run all checks
+      - name: Run unified checks
+        run: npm run check

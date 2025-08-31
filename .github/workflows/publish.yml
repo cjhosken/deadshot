@@ -1,0 +1,58 @@
+name: Publish Deadshot
+
+on:
+  release:
+    types: [published]   # only runs when a new release is published
+
+jobs:
+  build-and-publish:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: npm run install:all
+
+      - name: Build Deadshot
+        run: npm run build
+
+      - name: Set artifact extension
+        id: artifact
+        shell: bash
+        run: |
+            if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            echo "EXT=.exe" >> $GITHUB_ENV
+            elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            echo "EXT=.AppImage" >> $GITHUB_ENV
+            elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            echo "EXT=.dmg" >> $GITHUB_ENV
+            else
+            echo "EXT=" >> $GITHUB_ENV
+            fi
+
+      # Upload platform-specific artifact
+      - name: Upload Release Artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./electron/Deadshot.${EXT}   # adjust to your actual output path
+          asset_name: Deadshot-${{ github.ref_name }}-${{ matrix.os }}${EXT}
+          asset_content_type: application/octet-stream
