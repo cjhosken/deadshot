@@ -4,10 +4,14 @@ import shutil
 import sys
 
 def build_backend():
-    # Get the current script directory
+    """Compile the backend using pyinstaller for use with electron."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     build_dir = os.path.abspath(os.path.join(script_dir, '../build/backend'))
-    models_dir = os.path.abspath(os.path.join(script_dir, 'models'))
+    
+    # package dirs are any directories that should be included with the electron build.
+    package_dirs = [
+        "models"
+    ]
     
     if os.path.exists(build_dir):
         shutil.rmtree(build_dir)
@@ -36,9 +40,10 @@ def build_backend():
     
     PyInstaller.__main__.run(pyinstaller_args)
     
-    shutil.copytree(models_dir, os.path.join(build_dir, "models"))
+    for package_dir in package_dirs:
+        shutil.copytree(os.path.join(script_dir, package_dir), os.path.join(build_dir, package_dir))
 
-    # Clean up unnecessary files
+    # remove any files and folders that start with "_'.
     for item in os.listdir(build_dir):
         if item.startswith('_'):
             item_path = os.path.join(build_dir, item)

@@ -1,23 +1,22 @@
 {
-    "name": "deadshot-electron",
+    "name": "electron-deadshot",
     "version": "1.0.0",
     "description": "Electon wrapper for Deadshot.",
+    "keywords": [],
+    "author": "Christopher Hosken",
+    "license": "GPL-3.0-only",
     "main": "main.js",
     "scripts": {
         "start": "electron .",
         "build": "npx electron-builder"
     },
-    "keywords": [],
-    "author": "Christopher Hosken",
-    "license": "GPL-3.0-only",
     "devDependencies": {
         "electron": "37.4.0",
-        "electron-builder": "^26.0.12"
+        "electron-builder": "26.0.12"
     },
     "dependencies": {
-        "concurrently": "^8.2.0",
-        "electron-is-dev": "^3.0.1",
-        "wait-on": "^7.0.1"
+        "concurrently": "^9.2.1",
+        "wait-on": "^8.0.4"
     },
     "build": {
         "appId": "cjhosken.deadshot",

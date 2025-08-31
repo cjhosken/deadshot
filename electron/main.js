@@ -1,12 +1,15 @@
-const { app, BrowserWindow, session, dialog, Menu } = require('electron');
+const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
 
+// Hardware acceleration is disabled for the time being due to GPU driver issues (Windows)
 app.disableHardwareAcceleration();
 
+// Electron likes to throw security warnings for dev. This disables them.
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
+// Check if the current running instance is development or production.
 const isDev = () => {
     return process.env.NODE_ENV === "development" ||
         process.defaultApp ||
@@ -16,6 +19,8 @@ const isDev = () => {
 let mainWindow;
 let pythonProcess = null;
 
+// When running the production build, Windows' firewalls asks for permission to run python. 
+// This auto accepts the firewall request.
 async function addFirewallRule() {
     if (process.platform !== 'win32') return;
     const backendPath = process.platform === 'win32'
@@ -34,6 +39,7 @@ async function addFirewallRule() {
     });
 }
 
+// Create the Electron app window.
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
@@ -49,6 +55,8 @@ function createWindow() {
         show: false
     });
 
+    // In development mode, the frontend is running on a localhost port. 
+    // In production, the frontend is a .html file.
     const startUrl = isDev()
         ? 'http://localhost:5173'
         : `file://${path.join(process.resourcesPath, 'frontend', 'index.html')}`;
@@ -59,32 +67,22 @@ function createWindow() {
         mainWindow.show();
     });
 
-    mainWindow.webContents.setWindowOpenHandler(() => {
-        return { action: 'deny' };
-    });
-
     mainWindow.on('closed', () => {
         mainWindow = null;
     });
 }
 
+
+// The python backend is started automatically. 
+// It is assumed this function is only run in production builds.
 async function startBackend() {
-    if (isDev()) {
-        const pythonPath = process.platform === 'win32' ? 'python' : 'python3';
-        const backendPath = path.join(__dirname, '../backend/main.py');
-        pythonProcess = spawn(pythonPath, [backendPath])
-    } else {
-        await addFirewallRule();
-        const backendExecutable = process.platform === 'win32' ? path.join(process.resourcesPath, 'backend', 'backend.exe')
-            : path.join(process.resourcesPath, 'backend', 'backend');
+    await addFirewallRule();
+    const backendExecutable = process.platform === 'win32' ? path.join(process.resourcesPath, 'backend', 'backend.exe')
+        : path.join(process.resourcesPath, 'backend', 'backend');
 
-        if (process.platform !== 'win32') {
-            fs.chmodSync(backendExecutable, 0o755);
-        }
+    pythonProcess = spawn(backendExecutable);
 
-        pythonProcess = spawn(backendExecutable);
-    };
-
+    // To insure Python outputs are printed to the electron console.
     pythonProcess.stdout.on('data', (data) => {
         console.log(`Python stdout: ${data.toString().trim()}`);
     });
@@ -98,13 +96,16 @@ async function startBackend() {
     });
 }
 
+// Execute when the app is ready.
 app.whenReady().then(() => {
+    // In development mode, the backend is launched elsewhere.
     if (!isDev()) {
         startBackend();
     }
 
     createWindow();
 
+    // Only create a window if no window exists.
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindow();
@@ -112,6 +113,7 @@ app.whenReady().then(() => {
     });
 });
 
+// Handle window closing.
 app.on('window-all-closed', () => {
     if (pythonProcess) {
         pythonProcess.kill();
@@ -123,6 +125,7 @@ app.on('window-all-closed', () => {
     }
 });
 
+// Handle application quit.
 app.on('before-quit', () => {
     if (pythonProcess) {
         pythonProcess.kill();

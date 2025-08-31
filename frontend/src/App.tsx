@@ -3,7 +3,7 @@ import axios from 'axios'
 import './App.css'
 
 
-// Set API base URL based on environment
+// We set a base API for the python backend.
 const API_BASE_URL = 'http://localhost:8000'
 
 function App() {
