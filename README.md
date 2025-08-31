@@ -1,5 +1,5 @@
 <div style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
-<img src="./frontend/public/icon.png"/>
+<img src="./frontend/public/icon.png" style="width:50%;"/>
 
 # Deadshot
 </div>
