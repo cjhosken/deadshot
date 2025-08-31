@@ -15,6 +15,9 @@
 
 **Deadshot** is an open-source **SfM** and **AI-based camera tracking and motion capture** software.
 
+## 📦 Development
+What to contribute? Check [DEVEL.md](./DEVEL.md) for guidance on setup, contribution, and development.
+
 ## 📬 Contact & Information
 
 Deadshot was written by **Christopher Hosken** for his Research & Development project at **Bournemouth University**.
