@@ -1,0 +1,67 @@
+
+#custom-select {
+    width: 100%;
+    min-width: 5em;
+    max-width: 10em;
+    display: inline-block;
+}
+.customSelect {
+    padding: 5px;
+    text-align: left;
+    border-radius: 8px;
+    background-color: var(--dark);
+    color: #fff;
+    border: 1px solid var(--grey);
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml,<svg fill="white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path d="M2 0L0 2h4z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: 90% 70%;
+    background-size: 0.6em auto;
+}
+
+.customSelect.active {
+    background-image: url('data:image/svg+xml,<svg fill="white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path d="M2 5L0 3h4z"/></svg>');
+    background-position: 90% 40%;
+}
+
+.customSelectList {
+    position: absolute;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: end;
+    justify-content: start;
+    width: fit-content;
+    min-width: calc(5em - 1px);
+    max-width: calc(10em - 1px);
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--grey);
+    height: fit-content;
+}
+
+.customSelectList .option {
+    position: relative;
+    background-color: var(--dark);
+    color: #fff;
+    border: none;
+    list-style: none;
+    text-align: center;
+    width: 100%;
+    margin: 0;
+    padding: 0.1em 0em;
+    height: fit-content;
+}
+
+.customSelectList .option:hover {
+    cursor: pointer;
+    background-color: var(--primary-light);
+}
+
+.customSelectList .option.active {
+    background-color: var(--primary);
+}

@@ -40,17 +40,59 @@
     background-size: 0.6em auto;
 }
 
+.cameraItem {
+    background-color: var(--dark);
+    color: white;
+    border: none;
+}
+
+.cameraItem:hover {
+    background-color: var(--primary-light);
+}
+
+.cameraItem:checked {
+    background-color: var(--primary);
+}
+
 #visibility-panel {
-    position: 'absolute';
-    top: '2.5em';
+    position: absolute;
+    top: 2.5em;
     right: 0;
-    background-color: 'var(--dark)';
-    border-radius: '8px';
-    padding: '0.5em';
-    display: 'flex';
-    flex-direction: 'column';
-    box-shadow: '0 4px 12px rgba(0,0,0,0.3)';
+    background-color: var(--dark);
+    border: 1px solid var(--grey);
+    border-radius: 8px;
+    padding: 0.5em;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     z-index: 1000;
+    width: fit-content;
+    height: fit-content;
+}
+
+#visibility-panel .checkbox {
+    display: flex;
+    justify-content: left;
+    align-items: center;
+    gap: 1em;
+    width: fit-content;
+}
+
+#visibility-panel .checkbox input {
+    width: 12px;
+    height: 12px;
+}
+
+#visibility-panel .checkbox:hover {
+    cursor: pointer;
+}
+
+#visibility-panel .checkbox input:enabled {
+    accent-color: var(--primary);
+}
+
+#visibility-panel .checkbox input.checkmark {
+    color: white;
 }
 
 #timeline {

@@ -7,6 +7,7 @@ import "./Viewport.css";
 import type Project from '../types/Project';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye } from '@fortawesome/free-regular-svg-icons';
+import CustomSelect from './CustomSelect';
 
 export default function Viewport({ project, workflow }: { project: Project, workflow: "mocap" | "track" }) {
     const mountRef = useRef<HTMLDivElement | null>(null);
@@ -14,16 +15,36 @@ export default function Viewport({ project, workflow }: { project: Project, work
 
     const [showGrid, setShowGrid] = useState(true);
 
+    const [showClips, setShowClips] = useState(false);
+    const [showCameras, setShowCamers] = useState(false);
+
+    const [showGeo, setShowGeo] = useState(true);
+    const [showRig, setShowRig] = useState(true);
+
+    const [showPoints, setShowPoints] = useState(true);
+
     const [showVisibilityPanel, setShowVisibilityPanel] = useState(false);
     const toggleVisibilityPanel = () => setShowVisibilityPanel(!showVisibilityPanel);
 
     const gridRef = useRef<THREE.Mesh | null>(null);
+    const modelRef = useRef<THREE.Group | null>(null);
+    const skeletonHelperRef = useRef<THREE.SkeletonHelper | null>(null);
+
 
     useEffect(() => {
         if (gridRef.current) {
             gridRef.current.visible = showGrid;
         }
     }, [showGrid]);
+
+    useEffect(() => {
+        if (skeletonHelperRef.current) {
+            skeletonHelperRef.current.visible = showRig;
+        }
+        if (modelRef.current) {
+            modelRef.current.visible = showGeo;
+        }
+    }, [showRig, showGeo]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -119,29 +140,14 @@ export default function Viewport({ project, workflow }: { project: Project, work
             });
 
 
-        
+
         const grid = createGrid();
         scene.add(grid);
         gridRef.current = grid;
         gridRef.current.visible = showGrid;
-        
-            
-        // Test Geometry
-        const loader = new GLTFLoader();
-        loader.load(
-            '/assets/models/actor.glb', // path to your .glb file
-            (gltf) => {
-                const model = gltf.scene;
-                scene.add(model);   // add model to your scene
-                model.position.set(0, 0, 0); // optional positioning
-            },
-            (xhr) => {
-                console.log(`Loading: ${(xhr.loaded / xhr.total * 100).toFixed(2)}%`);
-            },
-            (error) => {
-                console.error('Error loading GLB:', error);
-            }
-        );
+
+
+        createActor(scene);
 
         // Axis Scene (the little gizmo in the corner)
         const axisSize = 1;
@@ -204,7 +210,7 @@ export default function Viewport({ project, workflow }: { project: Project, work
             mount.removeChild(renderer.domElement);
             renderer.dispose();
         }
-    })
+    }, [])
 
     function createGrid() {
         const size = 1000;
@@ -286,6 +292,41 @@ export default function Viewport({ project, workflow }: { project: Project, work
         scene.add(zArrow);
     }
 
+    function createActor(scene: THREE.Scene) {
+        const loader = new GLTFLoader();
+        loader.load(
+            "/assets/models/actor.glb",
+            (gltf) => {
+                const model = gltf.scene
+                // usdScene is a THREE.Group
+                model.position.set(0, 0, 0);
+                model.visible = showGeo;
+                // Optional: add skeleton helper if it has bones
+                const skeletonHelper = new THREE.SkeletonHelper(model);
+                skeletonHelper.visible = showRig;
+
+                scene.add(model);
+                scene.add(skeletonHelper);
+
+                modelRef.current = model;
+                skeletonHelperRef.current = skeletonHelper;
+            }
+        );
+    }
+    /*
+    function setActorAnimation(animations: THREE.AnimationClip[], animationName? : string) {
+        if (!modelRef) return;
+        const model = modelRef;
+    }
+
+    function createPointCloud() {
+
+    }
+
+    function createCameras() {
+
+    }
+    */
     return (
         <div id="viewport">
             <div id="canvas" ref={mountRef} />
@@ -294,33 +335,30 @@ export default function Viewport({ project, workflow }: { project: Project, work
                     <button
                         className="iconButton"
                         onClick={toggleVisibilityPanel}
-                        title="Toggle visibility options"
+                        title="Set visibility options"
                     >
                         <FontAwesomeIcon icon={faEye} />
                     </button>
 
                     {showVisibilityPanel && (
                         <div id="visibility-panel">
-                            <label><input type="checkbox" id="show-grid" checked={showGrid} onClick={() => setShowGrid(!showGrid)}/>Grid</label>
-                            <label><input type="checkbox" id="show-debug-cameras" />Cameras</label>
-                            <label><input type="checkbox" id="show-clips" />Clips</label>
+                            <label title="Show grid" className='checkbox'><input type="checkbox" id="show-grid" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />Grid</label>
+                            <label title="Show cameras" className='checkbox'><input type="checkbox" id="show-debug-cameras" checked={showCameras} onChange={(e) => setShowCamers(e.target.checked)} />Cameras</label>
+                            <label title="Show source videos as planes" className='checkbox'><input type="checkbox" id="show-clips" checked={showClips} onChange={(e) => setShowClips(e.target.checked)} />Clips</label>
                             {workflow === "mocap" ? (
                                 <>
-                                    <label><input type="checkbox" id="show-clips" />Rig</label>
-                                    <label><input type="checkbox" id="show-clips" />Geometry</label>
+                                    <label title="Show actor rig" className='checkbox'><input type="checkbox" id="show-rig" checked={showRig} onChange={(e) => setShowRig(e.target.checked)} />Rig</label>
+                                    <label title="Show actor geometry" className='checkbox'><input type="checkbox" id="show-geo" checked={showGeo} onChange={(e) => setShowGeo(e.target.checked)} />Geo</label>
                                 </>
                             ) : (
                                 <>
-                                    <label><input type="checkbox" id="show-clips" />Point Cloud</label>
-                                    <label><input type="checkbox" id="show-clips" />Debug Cameras</label>
+                                    <label title="Show generated point cloud" className='checkbox'><input type="checkbox" id="show-points" checked={showPoints} onChange={(e) => setShowPoints(e.target.checked)} />Points</label>
                                 </>
                             )}
                         </div>
                     )}
                 </div>
-                <select id="camera-select">
-                    <option> persp </option>
-                </select>
+                <CustomSelect options={["persp"]} title='Select view' />
             </div>
             <div id="timeline">
                 <div id="timeline-track">

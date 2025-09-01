@@ -62,14 +62,14 @@ System Info:
 
     return (
         <div id="menuBar">
-            <button title="Opens an existing Deadshot project." className="iconButton" onClick={() => handleMenuClick("open")}><FontAwesomeIcon icon={faFolderOpen}/></button>
-            <button title="Saves the current Deadshot project." className="iconButton" onClick={() => handleMenuClick("save")}><FontAwesomeIcon icon={faSave}/></button>
+            <button title="Open an existing Deadshot project" className="iconButton" onClick={() => handleMenuClick("open")}><FontAwesomeIcon icon={faFolderOpen}/></button>
+            <button title="Save the current Deadshot project" className="iconButton" onClick={() => handleMenuClick("save")}><FontAwesomeIcon icon={faSave}/></button>
             <div className="separator"></div>
-            <button title="Enters the Motion Capture area." className={`iconButton ${workflow === "mocap" ? "active" : ""}`} onClick={() => setWorkflow("mocap")}><FontAwesomeIcon icon={faPersonRunning}/></button>
-            <button title="Enters the Camera Tracking area." className={`iconButton ${workflow === "track" ? "active" : ""}`} onClick={() => setWorkflow("track")}><FontAwesomeIcon icon={faArrowsToEye}/></button>
+            <button title="Enter the Motion Capture area" className={`iconButton ${workflow === "mocap" ? "active" : ""}`} onClick={() => setWorkflow("mocap")}><FontAwesomeIcon icon={faPersonRunning}/></button>
+            <button title="Enter the Camera Tracking area" className={`iconButton ${workflow === "track" ? "active" : ""}`} onClick={() => setWorkflow("track")}><FontAwesomeIcon icon={faArrowsToEye}/></button>
             <div className="separator"></div>
-            <button title="Opens the Documentation." onClick={() => openDocumentation()} className="iconButton"><FontAwesomeIcon icon={faQuestion}/></button>
-            <button title="Reports a bug." className="iconButton" onClick={()=>reportBug()}><FontAwesomeIcon icon={faBug}/></button>
+            <button title="Open the documentation" onClick={() => openDocumentation()} className="iconButton"><FontAwesomeIcon icon={faQuestion}/></button>
+            <button title="Report a bug." className="iconButton" onClick={()=>reportBug()}><FontAwesomeIcon icon={faBug}/></button>
         </div>
     );
 }
