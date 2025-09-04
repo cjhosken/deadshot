@@ -43,8 +43,30 @@ button:hover {
   background-color: transparent;
   color: white;
   transition: color ease 0.2s;
+  display: flex;              /* use flexbox */
+  align-items: center;        /* vertical centering */
+  justify-content: center;    /* horizontal centering */
+  height: 36px;               /* button height */
+  width: 36px;                /* button width */
+  border: none;
+  border-radius: 4px;         /* optional rounded corners */
+  font-size: 18px;            /* icon size */
 }
 
 .iconButton:hover {
     color: var(--primary);
+}
+
+input {
+  background-color: #0A0A0A;
+  padding: 5px;
+  border: solid #333 1px;
+  border-radius: 12px;
+  text-align: center;
+  transition: border 0.25s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--primary);
 }

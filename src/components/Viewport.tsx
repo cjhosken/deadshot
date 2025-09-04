@@ -181,7 +181,7 @@ export default function Viewport() {
 
     function createAxes(scene: THREE.Scene) {
         // Create X axis (red)
-        const xMat = new THREE.MeshBasicMaterial({ color: 0xe65519 });
+        const xMat = new THREE.MeshBasicMaterial({ color: 0xF54900 });
         const xGeom = new THREE.CylinderGeometry(0.02, 0.02, 0.8);
         const xArrow = new THREE.Mesh(xGeom, xMat);
         xArrow.position.set(0.4, 0, 0);
@@ -231,5 +231,9 @@ export default function Viewport() {
         );
     }
 
-    return <div id="viewport" ref={containerRef}></div>;
+    return (
+        <div id="viewport">
+            <div id="canvas" ref={containerRef}></div>
+        </div>
+    );
 }

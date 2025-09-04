@@ -2,7 +2,6 @@ import * as pako from "pako";
 
 type ProjectData = {
     name: string;
-    description: string;
     createdAt: string;
 };
 
