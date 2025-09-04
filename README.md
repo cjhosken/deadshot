@@ -13,10 +13,9 @@
 
 ---
 
-**Deadshot** is an open-source **SfM** and **AI-based camera tracking and motion capture** software.
+**Deadshot** is an open-source **AI-based motion capture** tool, running entirely in the web browser.
 
-## 📦 Development
-What to contribute? Check [DEVEL.md](./DEVEL.md) for guidance on setup, contribution, and development.
+You can try out **Deadshot** [Here](https://cjhosken.github.io/deadshot/)
 
 ## 📬 Contact & Information
 
