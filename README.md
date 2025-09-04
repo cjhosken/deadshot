@@ -10,7 +10,7 @@
 
 ---
 
-**Deadshot** is an open-source **AI-based motion capture** tool, running entirely in the web browser.
+**Deadshot** is an open-source cross-**AI-based motion capture** tool, running entirely in the web browser.
 
 You can try out **Deadshot** at https://cjhosken.github.io/deadshot/.
 
