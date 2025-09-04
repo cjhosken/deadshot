@@ -1,0 +1,40 @@
+#app-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    background-color: #131313;
+    box-shadow: rgba(0, 0, 0, 1) 0px 20px 20px;
+}
+
+#logo {
+    margin: 0.5em;
+    width: 48px;
+    height: 48px;
+}
+
+#button-bar {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.buttonBox {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-right: 1em;
+}
+
+#button-bar .iconButton {
+  display: flex;              /* use flexbox */
+  align-items: center;        /* vertical centering */
+  justify-content: center;    /* horizontal centering */
+  height: 36px;               /* button height */
+  width: 36px;                /* button width */
+  border: none;
+  border-radius: 4px;         /* optional rounded corners */
+  font-size: 18px;            /* icon size */
+  cursor: pointer;
+}

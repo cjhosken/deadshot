@@ -1,31 +1,47 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import './App.css'
+import { useState } from 'react';
+import './App.css';
+import { Project } from './types/Project'; // make sure your Project.ts file is in the same folder
+import AppBar from './components/AppBar';
+import Viewport from './components/Viewport';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [projectName, setProjectName] = useState('Deadshot Demo');
+  const [description, setDescription] = useState('Testing browser save/load');
+  const [loadedData, setLoadedData] = useState<any>(null);
+
+  // Save project
+  const handleSave = () => {
+    const project = new Project({
+      name: projectName,
+      description: description,
+      createdAt: new Date().toISOString(),
+    });
+    project.save('demo.deadshot');
+  };
+
+  // Load project
+  const handleLoad = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.deadshot';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const loadedProject = await Project.load(file);
+        setLoadedData(loadedProject.data);
+      }
+    };
+    input.click();
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div id="root">
+      <AppBar />
+      <div id="main">
+        <Viewport/>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
