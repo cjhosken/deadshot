@@ -4,7 +4,7 @@ import Viewport from './components/Viewport';
 
 function App() {
   return (
-    <div id="root">
+    <div id="app">
       <AppBar />
       <div id="main">
         <Viewport/>
