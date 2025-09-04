@@ -47,6 +47,7 @@ export default function AppBar() {
                     <button title="Save Current Deadshot Project" className="iconButton" onClick={handleSave}> <FaSave /> </button>
                 </div>
                 <input
+                    id="project-input"
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
                     placeholder="Project Name"

@@ -26,3 +26,8 @@
     align-items: center;
     margin-right: 1em;
 }
+
+#project-input {
+    width: 50%;
+    max-width: 100%;
+}
