@@ -1,21 +1,18 @@
 <p align="center">
-  <img src="./frontend/public/icon.png" alt="Deadshot Logo" width="200"/>
+  <img src="./public/logo.png" alt="Deadshot Logo" width="200"/>
 </p>
 
 <h1 align="center">Deadshot</h1>
 
 <p align="center">
-<a href="https://github.com/cjhosken/deadshot/actions/workflows/linux.yml"><img src="https://github.com/cjhosken/deadshot/actions/workflows/linux.yml/badge.svg?branch=main" alt="Linux Build"/></a>
-<a href="https://github.com/cjhosken/deadshot/actions/workflows/windows.yml"><img src="https://github.com/cjhosken/deadshot/actions/workflows/windows.yml/badge.svg" alt="Windows Build"/></a>
-<a href="https://github.com/cjhosken/deadshot/actions/workflows/macos.yml"><img src="https://github.com/cjhosken/deadshot/actions/workflows/macos.yml/badge.svg" alt="macOS Build"/></a>
-<a href="https://github.com/cjhosken/deadshot/actions/workflows/check.yml"><img src="https://github.com/cjhosken/deadshot/actions/workflows/check.yml/badge.svg" alt="Checks"/></a>
-</p>
+<a href="https://github.com/cjhosken/deadshot/actions/workflows/main.yml"><img src="https://github.com/cjhosken/deadshot/actions/workflows/main.yml/badge.svg?branch=main" alt="Web Build"/></a>
+<p>
 
 ---
 
 **Deadshot** is an open-source **AI-based motion capture** tool, running entirely in the web browser.
 
-You can try out **Deadshot** [Here](https://cjhosken.github.io/deadshot/)
+You can try out **Deadshot** [Here](https://cjhosken.github.io/deadshot/).
 
 ## 📬 Contact & Information
 
