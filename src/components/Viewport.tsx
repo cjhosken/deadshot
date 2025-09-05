@@ -65,9 +65,24 @@ export default function Viewport() {
         onScrub(e.clientX);
     };
 
+    const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (e.touches.length !== 1) return; // single touch only
+        isDraggingRef.current = true;
+        wasPlayingRef.current = isPlayingRef.current;
+        if (isPlayingRef.current) clockRef.current.stop();
+        isPlayingRef.current = false;
+        setIsPlaying(false);
+        onScrub(e.touches[0].clientX);
+    };
+
     const onMouseMove = (e: MouseEvent) => {
         if (!isDraggingRef.current) return;
         onScrub(e.clientX);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+        if (!isDraggingRef.current || e.touches.length !== 1) return;
+        onScrub(e.touches[0].clientX);
     };
 
     const onMouseUp = () => {
@@ -84,12 +99,32 @@ export default function Viewport() {
         }
     };
 
+    const onTouchEnd = () => {
+        if (isDraggingRef.current) {
+            isDraggingRef.current = false;
+
+            if (wasDraggingRef.current) {
+                setIsPlaying(wasPlayingRef.current);
+                if (wasPlayingRef.current) clockRef.current.start();
+            }
+
+            wasDraggingRef.current = false;
+        }
+    };
+
     useEffect(() => {
         window.addEventListener("mousemove", onMouseMove);
         window.addEventListener("mouseup", onMouseUp);
+
+        window.addEventListener("touchmove", onTouchMove);
+        window.addEventListener("touchend", onTouchEnd);
+
         return () => {
             window.removeEventListener("mousemove", onMouseMove);
             window.removeEventListener("mouseup", onMouseUp);
+
+            window.removeEventListener("touchmove", onTouchMove);
+            window.removeEventListener("touchend", onTouchEnd);
         };
     }, []);
 
@@ -120,10 +155,10 @@ export default function Viewport() {
         );
 
         const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
         controls.rotateSpeed = 0.5;
+        controls.zoomSpeed = 1.0; // faster pinch zoom
         controls.panSpeed = 0.5;
-        controls.zoomSpeed = 0.5;
+        controls.enableDamping = true;
         controls.dampingFactor = 0.1;
 
         camera.position.set(2, 2, 2);
@@ -284,8 +319,11 @@ export default function Viewport() {
                     >
                         <FaStop />
                     </button>
-                    <div className="frameInfo">{frame}</div>
-                    <div id="scrollbar" onMouseDown={onMouseDown}>
+                    <div className="frameInfo" style={{
+                        width: `${String(duration).length}ch`,
+                        textAlign: "right"
+                    }}>{frame}</div>
+                    <div id="scrollbar" onMouseDown={onMouseDown} onTouchStart={onTouchStart}>
                         <div id="handle"></div>
                     </div>
                     <div className="frameInfo">{duration}</div>

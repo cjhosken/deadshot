@@ -62,3 +62,7 @@
   pointer-events: none; /* so clicks pass through */
   transition: left 0.025s linear;
 }
+
+.frameInfo {
+    user-select: none;
+}
