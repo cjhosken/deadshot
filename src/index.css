@@ -70,3 +70,19 @@ input:focus {
   outline: none;
   border-color: var(--primary);
 }
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  backdrop-filter: blur(4px);
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+}

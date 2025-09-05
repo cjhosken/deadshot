@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaTrash, FaDownload } from "react-icons/fa";
 
 import "./MotionClipDropdown.css"
@@ -9,6 +9,8 @@ export default function MotionClipDropdown() {
     new MotionClip("test")
   ]);
   const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null); // ref for the dropdown container
+
 
   const handleDelete = (name: string) => {
     setMotionClips(motionClips.filter((clip) => clip.name !== name));
@@ -18,11 +20,27 @@ export default function MotionClipDropdown() {
     clip.export();
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div className="dropdown">
+    <div className="dropdown" ref={dropdownRef}>
       <button id="select" className={open ? "open" : ""} onClick={() => setOpen(!open)}>Select Motion Clip</button>
       {open && (
         <ul className="dropdownMenu">
+          <li key="NONE" className="dropdownItem">
+            <span id="name">None</span>
+          </li>
           {motionClips.map((clip) => (
             <li key={clip.name} className="dropdownItem">
               <span id="name">{clip.name}</span>
