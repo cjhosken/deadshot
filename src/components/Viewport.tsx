@@ -13,12 +13,23 @@ export default function Viewport() {
 
     const [isPlaying, setIsPlaying] = useState(false);
     const [duration, setDuration] = useState(120); // seconds
+    const [frame, setFrame] = useState(0);
     const [fps] = useState(24);
 
     const currentFrameRef = useRef(0);
+    const isPlayingRef = useRef(isPlaying);
 
     const clockRef = useRef(new THREE.Clock(false));
     const accumulatorRef = useRef(0);
+
+    const togglePlay = () => {
+        const newState = !isPlayingRef.current;
+        isPlayingRef.current = newState;
+        setIsPlaying(newState);
+
+        if (newState) clockRef.current.start();
+        else clockRef.current.stop();
+    }
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -80,8 +91,9 @@ export default function Viewport() {
             animationFrameId = requestAnimationFrame(animate);
             controls.update();
 
-            if (isPlaying) {
-                accumulatorRef.current += clockRef.current.getDelta();
+            if (isPlayingRef.current) {
+                const delta = clockRef.current.getDelta();
+                accumulatorRef.current += delta;
                 const frameTime = 1 / fps;
 
                 while (accumulatorRef.current >= frameTime) {
@@ -99,6 +111,8 @@ export default function Viewport() {
 
                 }
 
+                setFrame(currentFrameRef.current);
+
                 const pct = (currentFrameRef.current / duration) * 100;
                 const handle = document.getElementById("handle");
                 if (handle) {
@@ -110,8 +124,8 @@ export default function Viewport() {
             renderer.setViewport(0, 0, container.clientWidth, container.clientHeight);
             renderer.render(scene, camera);
         };
-        animate();
 
+        animate();
 
         // Cleanup
         return () => {
@@ -120,7 +134,7 @@ export default function Viewport() {
             renderer.dispose();
             container.removeChild(renderer.domElement);
         };
-    }, [isPlaying]);
+    }, []);
 
     function createGrid() {
         const size = 1000;
@@ -217,24 +231,28 @@ export default function Viewport() {
                 <div id="bar">
                     <button className="iconButton"
                         onClick={() => {
-                            if (!isPlaying) {
-                                clockRef.current.start();
-                                setIsPlaying(true);
-                            } else {
-                                clockRef.current.stop();
-                                setIsPlaying(false);
-                            }
+                            togglePlay();
                         }
                         }> {isPlaying ? <FaPause /> : <FaPlay />} </button>
                     <button className="iconButton"
                         onClick={() => {
-                            clockRef.current.stop();
-                            clockRef.current.elapsedTime = 0;
+                            if (mixerRef.current && actionRef.current) {
+                                actionRef.current.time = 0;
+                                mixerRef.current.update(0);
+                            }
                             currentFrameRef.current = 0;
+                            isPlayingRef.current = false;
+                            setFrame(0);
                             setIsPlaying(false);
+                            clockRef.current.stop();
+                            const pct = (currentFrameRef.current / duration) * 100;
+                            const handle = document.getElementById("handle");
+                            if (handle) {
+                                (handle as HTMLElement).style.left = `${pct}%`;
+                            }
                         }}
                     > <FaStop /> </button>
-                    <div className="frameInfo">{currentFrameRef.current}</div>
+                    <div className="frameInfo">{frame}</div>
                     <div id="scrollbar">
                         <div id="handle"></div>
                     </div>
