@@ -6,30 +6,96 @@ import { FaPause, FaPlay, FaStop } from "react-icons/fa";
 
 export default function Viewport() {
     const containerRef = useRef<HTMLDivElement>(null);
+    const isDraggingRef = useRef(false);
+    const wasDraggingRef = useRef(false);
 
     const modelRef = useRef<THREE.Group | null>(null);
     const mixerRef = useRef<THREE.AnimationMixer | null>(null);
     const actionRef = useRef<THREE.AnimationAction | null>(null);
 
     const [isPlaying, setIsPlaying] = useState(false);
-    const [duration, setDuration] = useState(120); // seconds
+    const [duration, setDuration] = useState(120); // frames
     const [frame, setFrame] = useState(0);
     const [fps] = useState(24);
 
     const currentFrameRef = useRef(0);
-    const isPlayingRef = useRef(isPlaying);
+    const wasPlayingRef = useRef(false);
 
     const clockRef = useRef(new THREE.Clock(false));
     const accumulatorRef = useRef(0);
 
-    const togglePlay = () => {
-        const newState = !isPlayingRef.current;
-        isPlayingRef.current = newState;
-        setIsPlaying(newState);
-
-        if (newState) clockRef.current.start();
+    // Keep a ref synced with isPlaying for the animation loop
+    const isPlayingRef = useRef(isPlaying);
+    useEffect(() => {
+        isPlayingRef.current = isPlaying;
+        if (isPlaying) clockRef.current.start();
         else clockRef.current.stop();
-    }
+    }, [isPlaying]);
+
+    const onScrub = (clientX: number) => {
+        const scrollbar = document.getElementById("scrollbar");
+        if (!scrollbar) return;
+
+        const rect = scrollbar.getBoundingClientRect();
+        let x = clientX - rect.left;
+        x = Math.max(0, Math.min(rect.width, x));
+        const pct = x / rect.width;
+
+        const newFrame = Math.round(pct * duration);
+        currentFrameRef.current = newFrame;
+        setFrame(newFrame);
+
+        if (mixerRef.current && actionRef.current) {
+            actionRef.current.time = newFrame / fps;
+            mixerRef.current.update(0);
+        }
+
+        const handle = document.getElementById("handle");
+        if (handle) {
+            (handle as HTMLElement).style.left = `${pct * 100}%`;
+        }
+    };
+
+    const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        isDraggingRef.current = true;
+        wasPlayingRef.current = isPlayingRef.current;
+        if (isPlayingRef.current) clockRef.current.stop();
+        isPlayingRef.current = false;
+        setIsPlaying(false);
+        onScrub(e.clientX);
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+        if (!isDraggingRef.current) return;
+        onScrub(e.clientX);
+    };
+
+    const onMouseUp = () => {
+        if (isDraggingRef.current) {
+            isDraggingRef.current = false;
+
+            // Only restore play state if the user actually dragged
+            if (wasDraggingRef.current) {
+                setIsPlaying(wasPlayingRef.current);
+                if (wasPlayingRef.current) clockRef.current.start();
+            }
+
+            wasDraggingRef.current = false;
+        }
+    };
+
+    useEffect(() => {
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
+        return () => {
+            window.removeEventListener("mousemove", onMouseMove);
+            window.removeEventListener("mouseup", onMouseUp);
+        };
+    }, []);
+
+    const togglePlay = () => {
+        setIsPlaying((prev) => !prev);
+    };
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -39,24 +105,20 @@ export default function Viewport() {
         // === Renderer ===
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setSize(
-            container.clientWidth,
-            container.clientHeight
-        );
+        renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(renderer.domElement);
 
-        // === Scene setup ===
+        // === Scene ===
         const scene = new THREE.Scene();
 
         // === Camera ===
         const camera = new THREE.PerspectiveCamera(
-            75, // fov
+            75,
             container.clientWidth / container.clientHeight,
             0.1,
             1000
         );
 
-        // === Controls ===
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.rotateSpeed = 0.5;
@@ -64,19 +126,13 @@ export default function Viewport() {
         controls.zoomSpeed = 0.5;
         controls.dampingFactor = 0.1;
 
-        const resetCamera = () => {
-            camera.position.set(2, 2, 2);
-            controls.target.set(0, 0.5, 0);
-            controls.update();
-        };
-        resetCamera();
+        camera.position.set(2, 2, 2);
+        controls.target.set(0, 0.5, 0);
+        controls.update();
 
         const grid = createGrid();
         scene.add(grid);
-
         createLighting(scene);
-
-        // === Geometry & Material ===
         createActor(scene);
 
         const handleResize = () => {
@@ -98,36 +154,28 @@ export default function Viewport() {
 
                 while (accumulatorRef.current >= frameTime) {
                     currentFrameRef.current++;
-                    if (currentFrameRef.current > duration) {
-                        currentFrameRef.current = 0;
-                    }
+                    if (currentFrameRef.current > duration) currentFrameRef.current = 0;
                     accumulatorRef.current -= frameTime;
                 }
 
                 if (mixerRef.current && actionRef.current) {
-                    // Update mixer to reflect the exact frame
                     actionRef.current.time = currentFrameRef.current / fps;
-                    mixerRef.current.update(0); // update once to set pose
-
+                    mixerRef.current.update(0);
                 }
 
                 setFrame(currentFrameRef.current);
 
                 const pct = (currentFrameRef.current / duration) * 100;
                 const handle = document.getElementById("handle");
-                if (handle) {
-                    (handle as HTMLElement).style.left = `${pct}%`;
-                }
+                if (handle) handle.style.left = `${pct}%`;
             }
 
-            // Render main scene full screen
             renderer.setViewport(0, 0, container.clientWidth, container.clientHeight);
             renderer.render(scene, camera);
         };
 
         animate();
 
-        // Cleanup
         return () => {
             cancelAnimationFrame(animationFrameId);
             window.removeEventListener("resize", handleResize);
@@ -143,9 +191,7 @@ export default function Viewport() {
         const geometry = new THREE.PlaneGeometry(size, size, divisions, divisions);
         geometry.rotateX(-Math.PI / 2);
         const material = new THREE.ShaderMaterial({
-            uniforms: {
-                fadeDistance: { value: 25 },
-            },
+            uniforms: { fadeDistance: { value: 25 } },
             vertexShader: `
                 varying float vDist;
                 varying vec3 vPosition;
@@ -162,42 +208,32 @@ export default function Viewport() {
                 uniform float fadeDistance;
 
                 void main() {
-                    // Line thicknesses
                     float medium = 0.005;
                     float thick = 0.01;
-
-                    // Medium grid every 1 unit
                     float fxMed = abs(fract(vPosition.x / 1.0 - 0.5) - 0.5);
                     float fzMed = abs(fract(vPosition.z / 1.0 - 0.5) - 0.5);
                     float medLine = (1.0 - step(medium, min(fxMed, fzMed))) * 0.5;
-
-                    // Thick center lines
                     float centerX = 1.0 - step(thick, abs(vPosition.x));
                     float centerZ = 1.0 - step(thick, abs(vPosition.z));
                     float centerLine = max(centerX, centerZ);
-
                     float grid = max(centerLine, medLine);
-
                     grid *= 1.0 - smoothstep(length(vPosition), 0.0, fadeDistance);
-
                     gl_FragColor = vec4(vec3(0.5), grid);
                 }
             `,
             transparent: true,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
         });
 
-        const grid = new THREE.Mesh(geometry, material);
-        return grid;
+        return new THREE.Mesh(geometry, material);
     }
 
     function createLighting(scene: THREE.Scene) {
-        // Add Lighting
         new EXRLoader()
-            .setPath('assets/') // folder where your HDR file is stored
-            .load('hdri.exr', (texture) => {
+            .setPath("assets/")
+            .load("hdri.exr", (texture) => {
                 texture.mapping = THREE.EquirectangularReflectionMapping;
-                scene.environment = texture;  // For reflections
+                scene.environment = texture;
             });
     }
 
@@ -209,7 +245,6 @@ export default function Viewport() {
             scene.add(model);
             modelRef.current = model;
 
-            // Optional: skeleton helper
             const skeletonHelper = new THREE.SkeletonHelper(model);
             scene.add(skeletonHelper);
 
@@ -217,7 +252,7 @@ export default function Viewport() {
                 mixerRef.current = new THREE.AnimationMixer(model);
                 const action = mixerRef.current.clipAction(gltf.animations[0]);
                 action.play();
-                action.paused = true; // start paused
+                action.paused = true;
                 actionRef.current = action;
 
                 setDuration(Math.floor(gltf.animations[0].duration * fps));
@@ -229,35 +264,31 @@ export default function Viewport() {
         <div id="viewport">
             <div id="timeline">
                 <div id="bar">
-                    <button className="iconButton"
-                        onClick={() => {
-                            togglePlay();
-                        }
-                        }> {isPlaying ? <FaPause /> : <FaPlay />} </button>
-                    <button className="iconButton"
+                    <button className="iconButton" onClick={togglePlay}>
+                        {isPlaying ? <FaPause /> : <FaPlay />}
+                    </button>
+                    <button
+                        className="iconButton"
                         onClick={() => {
                             if (mixerRef.current && actionRef.current) {
                                 actionRef.current.time = 0;
                                 mixerRef.current.update(0);
                             }
                             currentFrameRef.current = 0;
-                            isPlayingRef.current = false;
                             setFrame(0);
                             setIsPlaying(false);
                             clockRef.current.stop();
-                            const pct = (currentFrameRef.current / duration) * 100;
                             const handle = document.getElementById("handle");
-                            if (handle) {
-                                (handle as HTMLElement).style.left = `${pct}%`;
-                            }
+                            if (handle) handle.style.left = `0%`;
                         }}
-                    > <FaStop /> </button>
+                    >
+                        <FaStop />
+                    </button>
                     <div className="frameInfo">{frame}</div>
-                    <div id="scrollbar">
+                    <div id="scrollbar" onMouseDown={onMouseDown}>
                         <div id="handle"></div>
                     </div>
                     <div className="frameInfo">{duration}</div>
-
                 </div>
             </div>
             <div id="canvas" ref={containerRef}></div>

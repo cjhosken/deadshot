@@ -42,7 +42,7 @@
 #scrollbar {
   position: relative;
   flex-grow: 1;
-  height: 3px;
+  height: 5px;
   background: #444;
   margin: 0 10px;
   border-radius: 3px;
@@ -60,5 +60,5 @@
   background: var(--primary);
   border-radius: 3px;
   pointer-events: none; /* so clicks pass through */
-  transition: left 0.05s linear;
+  transition: left 0.025s linear;
 }
