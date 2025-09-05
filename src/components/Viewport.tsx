@@ -1,10 +1,24 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import "./Viewport.css";
 import { EXRLoader, GLTFLoader, OrbitControls } from "three/examples/jsm/Addons.js";
+import { FaPause, FaPlay, FaStop } from "react-icons/fa";
 
 export default function Viewport() {
     const containerRef = useRef<HTMLDivElement>(null);
+
+    const modelRef = useRef<THREE.Group | null>(null);
+    const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+    const actionRef = useRef<THREE.AnimationAction | null>(null);
+
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [duration, setDuration] = useState(120); // seconds
+    const [fps] = useState(24);
+
+    const currentFrameRef = useRef(0);
+
+    const clockRef = useRef(new THREE.Clock(false));
+    const accumulatorRef = useRef(0);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -19,7 +33,7 @@ export default function Viewport() {
             container.clientHeight
         );
         container.appendChild(renderer.domElement);
-        
+
         // === Scene setup ===
         const scene = new THREE.Scene();
 
@@ -61,56 +75,40 @@ export default function Viewport() {
         };
         window.addEventListener("resize", handleResize);
 
-        const axisScene = new THREE.Scene();
-        const axisCamera = new THREE.OrthographicCamera(
-            -1,
-            1,
-            1,
-            -1,
-            0.1,
-            10
-        );
-        axisCamera.position.set(1, 1, 1);
-        axisCamera.lookAt(0, 0, 0);
-
-        createAxes(axisScene);
-
-
         let animationFrameId: number;
         const animate = () => {
             animationFrameId = requestAnimationFrame(animate);
-            // Update controls
             controls.update();
 
-            renderer.setViewport(0, 0, container.clientWidth, container.clientHeight);
-            renderer.setScissor(0, 0, container.clientWidth, container.clientHeight);
-            renderer.setScissorTest(true);
-            renderer.clear();
+            if (isPlaying) {
+                accumulatorRef.current += clockRef.current.getDelta();
+                const frameTime = 1 / fps;
+
+                while (accumulatorRef.current >= frameTime) {
+                    currentFrameRef.current++;
+                    if (currentFrameRef.current > duration) {
+                        currentFrameRef.current = 0;
+                    }
+                    accumulatorRef.current -= frameTime;
+                }
+
+                if (mixerRef.current && actionRef.current) {
+                    // Update mixer to reflect the exact frame
+                    actionRef.current.time = currentFrameRef.current / fps;
+                    mixerRef.current.update(0); // update once to set pose
+
+                }
+
+                const pct = (currentFrameRef.current / duration) * 100;
+                const handle = document.getElementById("handle");
+                if (handle) {
+                    (handle as HTMLElement).style.left = `${pct}%`;
+                }
+            }
 
             // Render main scene full screen
             renderer.setViewport(0, 0, container.clientWidth, container.clientHeight);
-            renderer.setScissorTest(false);
             renderer.render(scene, camera);
-
-            const size = 50; // axis size in pixels
-            const offset = new THREE.Vector3();
-            offset.copy(camera.position).sub(controls.target).normalize();
-            axisCamera.position.copy(offset);
-            axisCamera.lookAt(new THREE.Vector3(0, 0, 0));
-            renderer.autoClear = false;
-            renderer.clearDepth();
-
-            // Use renderer.domElement.clientWidth / clientHeight to scale
-            const left = 10;  // horizontal padding from left
-            const bottom = 10;   // vertical padding from top
-
-            renderer.setViewport(left, bottom, size, size);
-            renderer.setScissor(left, bottom, size, size);
-            renderer.setScissorTest(true);
-
-            renderer.render(axisScene, axisCamera);
-            renderer.setScissorTest(false);
-
         };
         animate();
 
@@ -122,7 +120,7 @@ export default function Viewport() {
             renderer.dispose();
             container.removeChild(renderer.domElement);
         };
-    }, []);
+    }, [isPlaying]);
 
     function createGrid() {
         const size = 1000;
@@ -179,31 +177,6 @@ export default function Viewport() {
         return grid;
     }
 
-    function createAxes(scene: THREE.Scene) {
-        // Create X axis (red)
-        const xMat = new THREE.MeshBasicMaterial({ color: 0xF54900 });
-        const xGeom = new THREE.CylinderGeometry(0.02, 0.02, 0.8);
-        const xArrow = new THREE.Mesh(xGeom, xMat);
-        xArrow.position.set(0.4, 0, 0);
-        xArrow.rotation.z = -Math.PI / 2;
-        scene.add(xArrow);
-
-        // Create Y axis (green)
-        const yMat = new THREE.MeshBasicMaterial({ color: 0x4daa57 });
-        const yGeom = new THREE.CylinderGeometry(0.02, 0.02, 0.8);
-        const yArrow = new THREE.Mesh(yGeom, yMat);
-        yArrow.position.set(0, 0.4, 0);
-        scene.add(yArrow);
-
-        // Create Z axis (blue)
-        const zMat = new THREE.MeshBasicMaterial({ color: 0x0971ec });
-        const zGeom = new THREE.CylinderGeometry(0.02, 0.02, 0.8);
-        const zArrow = new THREE.Mesh(zGeom, zMat);
-        zArrow.position.set(0, 0, 0.4);
-        zArrow.rotation.x = Math.PI / 2;
-        scene.add(zArrow);
-    }
-
     function createLighting(scene: THREE.Scene) {
         // Add Lighting
         new EXRLoader()
@@ -216,23 +189,59 @@ export default function Viewport() {
 
     function createActor(scene: THREE.Scene) {
         const loader = new GLTFLoader();
-        loader.load(
-            "assets/actor.glb",
-            (gltf) => {
-                const model = gltf.scene
-                // usdScene is a THREE.Group
-                model.position.set(0, 0, 0);
-                // Optional: add skeleton helper if it has bones
-                const skeletonHelper = new THREE.SkeletonHelper(model);
+        loader.load("assets/actor.glb", (gltf) => {
+            const model = gltf.scene;
+            model.position.set(0, 0, 0);
+            scene.add(model);
+            modelRef.current = model;
 
-                scene.add(model);
-                scene.add(skeletonHelper);
+            // Optional: skeleton helper
+            const skeletonHelper = new THREE.SkeletonHelper(model);
+            scene.add(skeletonHelper);
+
+            if (gltf.animations.length > 0) {
+                mixerRef.current = new THREE.AnimationMixer(model);
+                const action = mixerRef.current.clipAction(gltf.animations[0]);
+                action.play();
+                action.paused = true; // start paused
+                actionRef.current = action;
+
+                setDuration(Math.floor(gltf.animations[0].duration * fps));
             }
-        );
+        });
     }
 
     return (
         <div id="viewport">
+            <div id="timeline">
+                <div id="bar">
+                    <button className="iconButton"
+                        onClick={() => {
+                            if (!isPlaying) {
+                                clockRef.current.start();
+                                setIsPlaying(true);
+                            } else {
+                                clockRef.current.stop();
+                                setIsPlaying(false);
+                            }
+                        }
+                        }> {isPlaying ? <FaPause /> : <FaPlay />} </button>
+                    <button className="iconButton"
+                        onClick={() => {
+                            clockRef.current.stop();
+                            clockRef.current.elapsedTime = 0;
+                            currentFrameRef.current = 0;
+                            setIsPlaying(false);
+                        }}
+                    > <FaStop /> </button>
+                    <div className="frameInfo">{currentFrameRef.current}</div>
+                    <div id="scrollbar">
+                        <div id="handle"></div>
+                    </div>
+                    <div className="frameInfo">{duration}</div>
+
+                </div>
+            </div>
             <div id="canvas" ref={containerRef}></div>
         </div>
     );
