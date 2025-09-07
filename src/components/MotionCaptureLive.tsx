@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import './MotionCapture.css';
+import Viewport from './Viewport';
 
 export default function MotionCaptureLive({ onGoHome }: { onGoHome: () => void }) {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -35,15 +36,15 @@ export default function MotionCaptureLive({ onGoHome }: { onGoHome: () => void }
                 }
 
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
+                    video: {
                         deviceId: { exact: selectedDeviceId },
                         width: { ideal: 1280 },
                         height: { ideal: 720 },
                         frameRate: { ideal: 24 },
                         autoGainControl: true
-                        
-                    
-                },    
+
+
+                    },
                 });
                 streamRef.current = stream; // save stream
                 if (videoRef.current) videoRef.current.srcObject = stream;
@@ -83,24 +84,28 @@ export default function MotionCaptureLive({ onGoHome }: { onGoHome: () => void }
 
     return (
         <div id="container">
-            <h2>Live Capture View</h2>
-            <video ref={videoRef} autoPlay playsInline style={{ width: '100%' }} />
-
-            <div>
-                <label>Select Camera:</label>
-                <select
-                    value={selectedDeviceId}
-                    onChange={(e) => setSelectedDeviceId(e.target.value)}
-                >
-                    {devices.map(device => (
-                        <option key={device.deviceId} value={device.deviceId}>
-                            {device.label || `Camera ${device.deviceId}`}
-                        </option>
-                    ))}
-                </select>
+            <div id="live-view">
+                <Viewport showTimeline={false}/>
             </div>
-
-            <button onClick={handleGoHome}>Go Home</button>
+            <button onClick={handleGoHome} id="home-button">Exit</button>
+            <div id="camera-overlay">
+                <video ref={videoRef} autoPlay playsInline />
+                <div>
+                    <select
+                        value={selectedDeviceId}
+                        onChange={(e) => setSelectedDeviceId(e.target.value)}
+                    >
+                        {devices.map(device => (
+                            <option key={device.deviceId} value={device.deviceId}>
+                                {device.label || `Camera ${device.deviceId}`}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+            <div id="record-bar">
+                <button className="iconButton" id="record-button" title="Record"> ● </button>
+            </div>
         </div>
     );
 }

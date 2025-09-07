@@ -1,10 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import "./Viewport.css";
 import { EXRLoader, GLTFLoader, OrbitControls } from "three/examples/jsm/Addons.js";
 import { FaPause, FaPlay, FaStop } from "react-icons/fa";
+import Timeline from "./Timeline";
 
-export default function Viewport() {
+export default function Viewport({
+    showTimeline
+} : {
+    showTimeline: boolean
+}
+) {
     const containerRef = useRef<HTMLDivElement>(null);
     const isDraggingRef = useRef(false);
     const wasDraggingRef = useRef(false);
@@ -32,7 +38,7 @@ export default function Viewport() {
         else clockRef.current.stop();
     }, [isPlaying]);
 
-    const onScrub = (clientX: number) => {
+    const onScrub = useCallback((clientX: number) => {
         const scrollbar = document.getElementById("scrollbar");
         if (!scrollbar) return;
 
@@ -54,18 +60,18 @@ export default function Viewport() {
         if (handle) {
             (handle as HTMLElement).style.left = `${pct * 100}%`;
         }
-    };
+    }, [duration, fps]);
 
-    const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         isDraggingRef.current = true;
         wasPlayingRef.current = isPlayingRef.current;
         if (isPlayingRef.current) clockRef.current.stop();
         isPlayingRef.current = false;
         setIsPlaying(false);
         onScrub(e.clientX);
-    };
+    }, [onScrub]);
 
-    const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const onTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
         if (e.touches.length !== 1) return; // single touch only
         isDraggingRef.current = true;
         wasPlayingRef.current = isPlayingRef.current;
@@ -73,19 +79,19 @@ export default function Viewport() {
         isPlayingRef.current = false;
         setIsPlaying(false);
         onScrub(e.touches[0].clientX);
-    };
+    }, [onScrub]);
 
-    const onMouseMove = (e: MouseEvent) => {
+    const onMouseMove = useCallback((e: MouseEvent) => {
         if (!isDraggingRef.current) return;
         onScrub(e.clientX);
-    };
+    }, [onScrub]);
 
-    const onTouchMove = (e: TouchEvent) => {
+    const onTouchMove = useCallback((e: TouchEvent) => {
         if (!isDraggingRef.current || e.touches.length !== 1) return;
         onScrub(e.touches[0].clientX);
-    };
+    }, [onScrub]);
 
-    const onMouseUp = () => {
+    const onMouseUp = useCallback(() => {
         if (isDraggingRef.current) {
             isDraggingRef.current = false;
 
@@ -97,9 +103,9 @@ export default function Viewport() {
 
             wasDraggingRef.current = false;
         }
-    };
+    }, []);
 
-    const onTouchEnd = () => {
+    const onTouchEnd = useCallback(() => {
         if (isDraggingRef.current) {
             isDraggingRef.current = false;
 
@@ -110,7 +116,7 @@ export default function Viewport() {
 
             wasDraggingRef.current = false;
         }
-    };
+    }, []);
 
     useEffect(() => {
         window.addEventListener("mousemove", onMouseMove);
@@ -126,11 +132,22 @@ export default function Viewport() {
             window.removeEventListener("touchmove", onTouchMove);
             window.removeEventListener("touchend", onTouchEnd);
         };
+    }, [onMouseMove, onMouseUp, onTouchMove, onTouchEnd]);
+
+    const togglePlay = useCallback(() => {
+        setIsPlaying((prev) => !prev);
     }, []);
 
-    const togglePlay = () => {
-        setIsPlaying((prev) => !prev);
-    };
+    const onStop = useCallback(() => {
+        if (mixerRef.current && actionRef.current) {
+            actionRef.current.time = 0;
+            mixerRef.current.update(0);
+        }
+        currentFrameRef.current = 0;
+        setFrame(0);
+        setIsPlaying(false);
+        clockRef.current.stop();
+    }, []);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -297,38 +314,18 @@ export default function Viewport() {
 
     return (
         <div id="viewport">
-            <div id="timeline">
-                <div id="bar">
-                    <button className="iconButton" onClick={togglePlay}>
-                        {isPlaying ? <FaPause /> : <FaPlay />}
-                    </button>
-                    <button
-                        className="iconButton"
-                        onClick={() => {
-                            if (mixerRef.current && actionRef.current) {
-                                actionRef.current.time = 0;
-                                mixerRef.current.update(0);
-                            }
-                            currentFrameRef.current = 0;
-                            setFrame(0);
-                            setIsPlaying(false);
-                            clockRef.current.stop();
-                            const handle = document.getElementById("handle");
-                            if (handle) handle.style.left = `0%`;
-                        }}
-                    >
-                        <FaStop />
-                    </button>
-                    <div className="frameInfo" style={{
-                        width: `${String(duration).length}ch`,
-                        textAlign: "right"
-                    }}>{frame}</div>
-                    <div id="scrollbar" onMouseDown={onMouseDown} onTouchStart={onTouchStart}>
-                        <div id="handle"></div>
-                    </div>
-                    <div className="frameInfo">{duration}</div>
-                </div>
-            </div>
+            {showTimeline && (
+                <Timeline
+                    isPlaying={isPlaying}
+                    togglePlay={togglePlay}
+                    frame={frame}
+                    duration={duration}
+                    onScrub={onScrub}
+                    onStop={onStop}
+                    onMouseDown={onMouseDown}
+                    onTouchStart={onTouchStart}
+                />)
+            }
             <div id="canvas" ref={containerRef}></div>
         </div>
     );

@@ -2,10 +2,15 @@ import { FaFolderOpen, FaSave, FaBook, FaGithub } from "react-icons/fa";
 import { Project } from "../types/Project";
 
 import "./AppBar.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function AppBar() {
   const [projectName, setProjectName] = useState("Untitled"); // initial project name
+
+    useEffect(() => {
+        document.title = `Deadshot | ${projectName}`;
+    }, [projectName]);
+
 
     const handleSave = () => {
         // Ensure there is a project name

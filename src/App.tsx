@@ -27,7 +27,7 @@ function App() {
                 <button title="Create New Motion Clip" className="iconButton" id="add-button" onClick={handleAddButton}><FaPlus /></button>
                 <MotionClipDropdown />
               </div>
-              <Viewport/>
+              <Viewport showTimeline={true}/>
             </div>
           )
         }
