@@ -51,12 +51,7 @@ export default function MotionCaptureProcess({ onGoHome }: { onGoHome: () => voi
     }
     setFiles(prev => prev.filter(file => file.id !== id));
   };
-
-  const startProcessing = () => {
-    // Processing logic would go here
-    console.log("Starting processing for files:", files);
-  };
-
+  
   return (
     <div id="mocap-container">
         <div className="header">

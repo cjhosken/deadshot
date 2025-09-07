@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import "./Viewport.css";
 import { EXRLoader, GLTFLoader, OrbitControls } from "three/examples/jsm/Addons.js";
-import { FaPause, FaPlay, FaStop } from "react-icons/fa";
 import Timeline from "./Timeline";
 
 export default function Viewport({
@@ -320,7 +319,6 @@ export default function Viewport({
                     togglePlay={togglePlay}
                     frame={frame}
                     duration={duration}
-                    onScrub={onScrub}
                     onStop={onStop}
                     onMouseDown={onMouseDown}
                     onTouchStart={onTouchStart}

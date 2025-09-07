@@ -6,7 +6,6 @@ interface TimelineProps {
   togglePlay: () => void;
   frame: number;
   duration: number;
-  onScrub: (clientX: number) => void;
   onStop: () => void;
   onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
   onTouchStart: (e: React.TouchEvent<HTMLDivElement>) => void;
@@ -17,7 +16,6 @@ export default function Timeline({
   togglePlay,
   frame,
   duration,
-  onScrub,
   onStop,
   onMouseDown,
   onTouchStart
