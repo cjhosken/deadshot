@@ -7,7 +7,7 @@
 <div align="center">
   <img src="https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=fff"/>
   <img src="https://img.shields.io/badge/React_Typescript-%2320232a.svg?logo=react&logoColor=%2361DAFB"/>
-  <br/>
+  <br></br>
   <a href="https://github.com/cjhosken/deadshot/actions/workflows/main.yml">
     <img src="https://github.com/cjhosken/deadshot/actions/workflows/main.yml/badge.svg?branch=main" alt="Web Build"/>
   </a>
