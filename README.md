@@ -21,9 +21,9 @@
 
 **Deadshot** is an open-source **AI-powered motion capture** tool that runs entirely in your **web browser** — no installs, no extra software needed.  
 
-📖 Read the full documentation and background here → [**Deadshot Blog**](https://cjhosken.github.io/blog/deadshot/)  
+📖 Learn more → [**Deadshot Report**](https://cjhosken.github.io/blog/deadshot/)  
 
-🚀 Try it out live → [**Deadshot Demo**](https://cjhosken.github.io/deadshot/)  
+🚀 Try it out live → [**Deadshot**](https://cjhosken.github.io/deadshot/)  
 
 ---
 
