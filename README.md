@@ -2,29 +2,38 @@
   <img src="./public/logo.png" alt="Deadshot Logo" width="200"/>
 </p>
 
-<h1 align="center">Deadshot</h1>
+<h1 align="center">🎯 Deadshot</h1>
+
 <div align="center">
-<img src="https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=fff"/>
-<img src="https://img.shields.io/badge/React_Typescript-%2320232a.svg?logo=react&logoColor=%2361DAFB"/>
+  <img src="https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=fff"/>
+  <img src="https://img.shields.io/badge/React_Typescript-%2320232a.svg?logo=react&logoColor=%2361DAFB"/>
+  <br/>
+  <a href="https://github.com/cjhosken/deadshot/actions/workflows/main.yml">
+    <img src="https://github.com/cjhosken/deadshot/actions/workflows/main.yml/badge.svg?branch=main" alt="Web Build"/>
+  </a>
 </div>
-
-<br/>
-
-<p align="center">
-<a href="https://github.com/cjhosken/deadshot/actions/workflows/main.yml"><img src="https://github.com/cjhosken/deadshot/actions/workflows/main.yml/badge.svg?branch=main" alt="Web Build"/></a>
-<p>
 
 ---
 
-**Deadshot** is an open-source **AI-based motion capture** tool, running entirely in the web browser.
+**Deadshot** is an open-source **AI-powered motion capture** tool that runs entirely in your **web browser** — no installs, no extra software needed.  
 
-You can try out **Deadshot** at https://cjhosken.github.io/deadshot/.
+🚀 Try it out here: [**Deadshot Live Demo**](https://cjhosken.github.io/deadshot/)  
+
+---
+
+## ✨ Features
+
+- 🎥 **Web-based Motion Capture** — Runs directly in the browser with zero setup.  
+- 🤖 **AI-powered Tracking** — Uses AI models for accurate real-time motion capture.  
+- 🧩 **Open Source** — Free to explore, modify, and extend.
+
+---
 
 ## 📬 Contact & Information
 
-Deadshot was written by **Christopher Hosken** for his Research & Development project at **Bournemouth University**.
+Deadshot was created by **Christopher Hosken** as part of his **Research & Development project** at **Bournemouth University**.  
 
-For inquiries about the project, you can reach him at:
+- 📧 Email: [hoskenchristopher@gmail.com](mailto:hoskenchristopher@gmail.com)  
+- 🔗 LinkedIn: [christopher-hosken](https://www.linkedin.com/in/christopher-hosken/)  
 
-* 📧 [hoskenchristopher@gmail.com](mailto:hoskenchristopher@gmail.com)
-* 🔗 [Linkedin (christopher-hosken)](https://www.linkedin.com/in/christopher-hosken/)
+---
