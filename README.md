@@ -31,7 +31,7 @@
 
 - 🎥 **Web-based Motion Capture** — Works directly in the browser, zero setup required.  
 - 🤖 **AI-powered Tracking** — Leverages AI for accurate real-time motion tracking.  
-- 🧩 **Open Source** — Free to use, modify, and extend.  
+- 🧩 **Open Source** — 100% free to use, modify, and extend.  
 
 ---
 
