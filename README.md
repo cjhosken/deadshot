@@ -5,31 +5,37 @@
 <h1 align="center">🎯 Deadshot</h1>
 
 <div align="center">
+
   <img src="https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=fff"/>
   <img src="https://img.shields.io/badge/React_Typescript-%2320232a.svg?logo=react&logoColor=%2361DAFB"/>
-  <br></br>
+
+  <br/>
+
   <a href="https://github.com/cjhosken/deadshot/actions/workflows/main.yml">
     <img src="https://github.com/cjhosken/deadshot/actions/workflows/main.yml/badge.svg?branch=main" alt="Web Build"/>
   </a>
+
 </div>
 
 ---
 
 **Deadshot** is an open-source **AI-powered motion capture** tool that runs entirely in your **web browser** — no installs, no extra software needed.  
 
-🚀 Try it out here: [**Deadshot Live Demo**](https://cjhosken.github.io/deadshot/)  
+📖 Read the full documentation and background here → [**Deadshot Blog**](https://cjhosken.github.io/blog/deadshot/)  
+
+🚀 Try it out live → [**Deadshot Demo**](https://cjhosken.github.io/deadshot/)  
 
 ---
 
 ## ✨ Features
 
-- 🎥 **Web-based Motion Capture** — Runs directly in the browser with zero setup.  
-- 🤖 **AI-powered Tracking** — Uses AI models for accurate real-time motion capture.  
-- 🧩 **Open Source** — Free to explore, modify, and extend.
+- 🎥 **Web-based Motion Capture** — Works directly in the browser, zero setup required.  
+- 🤖 **AI-powered Tracking** — Leverages AI for accurate real-time motion tracking.  
+- 🧩 **Open Source** — Free to use, modify, and extend.  
 
 ---
 
-## 📬 Contact & Information
+## 📬 Contact & Info
 
 Deadshot was created by **Christopher Hosken** as part of his **Research & Development project** at **Bournemouth University**.  
 
