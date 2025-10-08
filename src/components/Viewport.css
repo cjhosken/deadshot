@@ -1,13 +1,13 @@
+/* src/components/Viewport.css */
 #viewport {
-    height: 100%;
-    width: 100%;
-    background-color: #0A0A0A;
+  width: 100%;
+  height: 100%;
+  background: #111;
+  display: flex;
 }
 
-#canvas {
-    height: 100%;
-    width: 100%;
-    background-color: #0A0A0A;
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
-
-

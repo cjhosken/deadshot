@@ -1,14 +1,28 @@
+html, body, #root, #app {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 #app {
-  width: 100vw;
-  height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 #main {
-  height: 100%;
+  flex: 1;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  min-height: 0; /* critical for flex children with overflow */
+}
+
+#home-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 0; /* important */
 }
 
 #overlay {
@@ -20,11 +34,7 @@
   position: absolute;
   gap: 2px;
   right: 0;
-}
-
-#home-view {
-  width: 100%;
-  height: 100%;
+  z-index: 100;
 }
 
 #context-selector {
@@ -51,6 +61,7 @@
   flex-direction: row;
   justify-content: center;
   align-items: center;
+  flex-wrap: wrap;
   gap: 1em;
   margin: 2em;
   margin-top: 1em;
@@ -64,11 +75,11 @@
   flex-direction: column;
   align-items: center;        /* vertical centering */
   justify-content: center;    /* horizontal centering */
-  height: 5em;               /* button height */
-  width: 5em;
+  height: 3em;               /* button height */
+  width: 3em;
   border: solid #333 1px;
   border-radius: 16px;         /* optional rounded corners */
-  font-size: 36px;            /* icon size */
+  font-size: 64px;            /* icon size */
 }
 
 .contextButton:hover {

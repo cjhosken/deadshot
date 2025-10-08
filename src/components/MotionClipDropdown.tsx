@@ -4,7 +4,15 @@ import { FaTrash, FaDownload } from "react-icons/fa";
 import "./MotionClipDropdown.css"
 import MotionClip from "../types/MotionClip";
 
-export default function MotionClipDropdown() {
+export default function MotionClipDropdown(
+  {
+    active,
+    setActive
+  } : {
+    active: MotionClip | null;
+    setActive: (clip: MotionClip | null) => void;
+  }
+) {
   const [motionClips, setMotionClips] = useState<MotionClip[]>([
     new MotionClip("test")
   ]);
@@ -38,11 +46,11 @@ export default function MotionClipDropdown() {
       <button id="select" className={open ? "open" : ""} onClick={() => setOpen(!open)}>Select Motion Clip</button>
       {open && (
         <ul className="dropdownMenu">
-          <li key="NONE" className="dropdownItem">
+          <li key="NONE" className={`dropdownItem` + (active === null ? " active" : "")} onClick={() => setActive(null)}>
             <span id="name">None</span>
           </li>
           {motionClips.map((clip) => (
-            <li key={clip.name} className="dropdownItem">
+            <li key={clip.name} className={`dropdownItem` + (active?.name === clip.name ? " active" : "")} onClick={() => setActive(clip)}>
               <span id="name">{clip.name}</span>
               <button className="iconButton" onClick={() => handleExport(clip)}> <FaDownload/> </button>
               <button className="iconButton" onClick={() => handleDelete(clip.name)}> <FaTrash/> </button>

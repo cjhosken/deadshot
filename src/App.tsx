@@ -7,10 +7,12 @@ import { useState } from 'react';
 import { FaPhotoFilm, FaX } from 'react-icons/fa6';
 import MotionCaptureProcess from './components/MotionCaptureProcess';
 import MotionCaptureLive from './components/MotionCaptureLive';
+import type MotionClip from './types/MotionClip';
 
 function App() {
   const [context, setContext] = useState<"home" | "mocap" | "process">("home");
   const [openContextSelector, setOpenContextSelector] = useState(false);
+  const [activeMotionClip, setActiveMotionClip] = useState<MotionClip | null>(null);
 
   const handleAddButton = () => {
     setOpenContextSelector(true);
@@ -25,7 +27,7 @@ function App() {
             <div id="home-view">
               <div id="overlay">
                 <button title="Create New Motion Clip" className="iconButton" id="add-button" onClick={handleAddButton}><FaPlus /></button>
-                <MotionClipDropdown />
+                <MotionClipDropdown active={activeMotionClip} setActive={setActiveMotionClip}/>
               </div>
               <Viewport showTimeline={true}/>
             </div>

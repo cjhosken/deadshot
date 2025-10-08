@@ -57,9 +57,13 @@
     transition: background 0.2s;
 }
 
+.dropdownItem.active {
+    color: var(--primary);
+}
+
 .dropdownItem:hover {
     cursor: pointer;
-    color: var(--primary);
+    color: #333;
 }
 
 .dropdownItem #name {
