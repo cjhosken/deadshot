@@ -91,6 +91,18 @@ export default function MotionCaptureLive() {
         setCountdown(5);
         setPoseHistory([]);
         setRecorded(false);
+
+        let counter = 5;
+        const interval = setInterval(() => {
+            counter -= 1;
+            setCountdown(counter);
+
+            if (counter <= 0) {
+                clearInterval(interval);
+                setShowCountdown(false);
+                setIsRecording(true);
+            }
+        }, 1000);
     };
 
     const handleStop = () => {
