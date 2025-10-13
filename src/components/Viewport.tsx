@@ -1,18 +1,19 @@
 import "./Viewport.css";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, OrbitControls, useGLTF } from "@react-three/drei";
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import * as THREE from "three";
 import Timeline from "./Timeline";
 
 interface ViewportProps {
-  showTimeline?: boolean;
+  recorded?: boolean;
+  pose?: any;
+  history?: any[];
 }
 
-export default function Viewport({ showTimeline = true }: ViewportProps) {
+export default function Viewport({ recorded, pose, history }: ViewportProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [frame, setFrame] = useState(0);
-  const [duration, setDuration] = useState(120);
   const [fps] = useState(24);
 
   const clock = useRef(new THREE.Clock(false));
@@ -32,9 +33,19 @@ export default function Viewport({ showTimeline = true }: ViewportProps) {
     clock.current.stop();
   }, []);
 
+  const [duration, setDuration] = useState(120);
+
+  useEffect(() => {
+    if (recorded && history && history.length > 0) {
+      setDuration(history.length - 1);
+    }
+  }, [recorded, history]);
+
+
+
   return (
     <div id="viewport">
-      {showTimeline && (
+      {recorded && (
         <Timeline
           isPlaying={isPlaying}
           togglePlay={togglePlay}
@@ -54,12 +65,11 @@ export default function Viewport({ showTimeline = true }: ViewportProps) {
       >
         <Scene
           isPlaying={isPlaying}
-          frame={frame}
           setFrame={setFrame}
           duration={duration}
-          setDuration={setDuration}
           fps={fps}
           currentFrame={currentFrame}
+          pose={recorded ? history?.[frame]?.pose : pose}
         />
       </Canvas>
     </div>
@@ -68,65 +78,115 @@ export default function Viewport({ showTimeline = true }: ViewportProps) {
 
 interface SceneProps {
   isPlaying: boolean;
-  frame: number;
   setFrame: (f: number) => void;
   duration: number;
-  setDuration: (d: number) => void;
   fps: number;
   currentFrame: React.MutableRefObject<number>;
+  pose?: any;
 }
 
 function Scene({
   isPlaying,
-  frame,
   setFrame,
   duration,
-  setDuration,
   fps,
   currentFrame,
+  pose,
 }: SceneProps) {
-  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
-  const actionRef = useRef<THREE.AnimationAction | null>(null);
   const accumulator = useRef(0);
 
   // --- Load GLTF actor ---
-  const { scene: model, animations } = useGLTF("assets/actor.glb");
+  const { scene: model } = useGLTF("assets/actor.glb");
+  const skeletonRef = useRef<THREE.Skeleton | null>(null);
 
-  // --- Setup animation mixer once ---
   useEffect(() => {
-    if (animations.length > 0) {
-      const mixer = new THREE.AnimationMixer(model);
-      const action = mixer.clipAction(animations[0]);
-      action.play();
-      action.paused = true;
-      mixerRef.current = mixer;
-      actionRef.current = action;
-      setDuration(Math.floor(animations[0].duration * fps));
+    model.traverse((object) => {
+      if ((object as THREE.SkinnedMesh).isSkinnedMesh) {
+        const skinnedMesh = object as THREE.SkinnedMesh;
+        skeletonRef.current = skinnedMesh.skeleton;
+      }
+    });
+  }, [model]);
+
+function PoseDebug({ pose }: { pose: any[] }) {
+  // --- build joint point cloud ---
+  const points = useMemo(() => {
+    const arr = new Float32Array(pose.length * 3);
+    for (let i = 0; i < pose.length; i++) {
+      const p = pose[i];
+      arr[i * 3 + 0] = (p.x - 0.5) * 2;
+      arr[i * 3 + 1] = (0.5 - p.y) * 2;
+      arr[i * 3 + 2] = -p.z * 2;
     }
-  }, [animations, model, fps, setDuration]);
+    return arr;
+  }, [pose]);
+
+  // --- define skeleton connections (based on BlazePose topology) ---
+  const connections: [number, number][] = [
+    [11, 12], // shoulders
+    [11, 13], [13, 15], // left arm
+    [12, 14], [14, 16], // right arm
+    [11, 23], [12, 24], // torso
+    [23, 24], // hips
+    [23, 25], [25, 27], // left leg
+    [24, 26], [26, 28], // right leg
+  ];
+
+  // --- build line segments ---
+  const linePositions = useMemo(() => {
+    const arr = new Float32Array(connections.length * 2 * 3);
+    for (let i = 0; i < connections.length; i++) {
+      const [a, b] = connections[i];
+      const pa = pose[a];
+      const pb = pose[b];
+      arr[i * 6 + 0] = (pa.x - 0.5) * 2;
+      arr[i * 6 + 1] = (0.5 - pa.y) * 2;
+      arr[i * 6 + 2] = -pa.z * 2;
+
+      arr[i * 6 + 3] = (pb.x - 0.5) * 2;
+      arr[i * 6 + 4] = (0.5 - pb.y) * 2;
+      arr[i * 6 + 5] = -pb.z * 2;
+    }
+    return arr;
+  }, [pose]);
+
+  return (
+    <group>
+      {/* Points (joints) */}
+      <points>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[points, 3]} />
+        </bufferGeometry>
+        <pointsMaterial color="lime" size={0.02} />
+      </points>
+
+      {/* Lines (bones) */}
+      <lineSegments>
+        <bufferGeometry>
+          <bufferAttribute attach="attributes-position" args={[linePositions, 3]} />
+        </bufferGeometry>
+        <lineBasicMaterial color="aqua" linewidth={2} />
+      </lineSegments>
+    </group>
+  );
+}
+
 
   // --- Frame update ---
   useFrame((_, delta) => {
     if (!isPlaying) return;
+    if (!pose) return;
 
     accumulator.current += delta;
     const frameTime = 1 / fps;
 
-    while (accumulator.current >= frameTime) {
-      currentFrame.current++;
-      if (currentFrame.current > duration) currentFrame.current = 0;
-      accumulator.current -= frameTime;
+    if (accumulator.current >= frameTime) {
+      accumulator.current = 0;
+      currentFrame.current = (currentFrame.current + 1) % duration;
+      setFrame(currentFrame.current);
     }
-
-    if (mixerRef.current && actionRef.current) {
-      actionRef.current.time = currentFrame.current / fps;
-      mixerRef.current.update(0);
-    }
-
-    console.log(frame);
-
-    setFrame(currentFrame.current);
   });
+
 
   return (
     <>
@@ -135,7 +195,8 @@ function Scene({
 
       {/* Model + skeleton */}
       <primitive object={model} />
-      <SkeletonHelper object={model} />
+      {/*<SkeletonHelper object={model} />*/}
+      {pose?.length > 0 && <PoseDebug pose={pose} />}
 
       {/* Ground grid */}
       <Grid />
@@ -200,9 +261,4 @@ function Grid() {
       />
     </mesh>
   );
-}
-
-function SkeletonHelper({ object }: { object: THREE.Object3D }) {
-  const helper = new THREE.SkeletonHelper(object);
-  return <primitive object={helper} />;
 }

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import "./MotionCapture.css";
+import "./MotionCaptureProcess.css";
 import Viewport from "./Viewport";
 
 interface ProcessingFile {
@@ -64,10 +64,6 @@ export default function MotionCaptureProcess({ onGoHome }: { onGoHome: () => voi
 
   return (
     <div id="mocap-container">
-      <div className="header">
-        <button onClick={onGoHome} id="home-button">Exit</button>
-      </div>
-
       {!showViewport && (
         <div className="upload-section">
           <div 
@@ -130,7 +126,7 @@ export default function MotionCaptureProcess({ onGoHome }: { onGoHome: () => voi
       {/* Show viewport after processing */}
       {showViewport && (
         <div className="viewport-container">
-          <Viewport showTimeline={true} />
+          <Viewport recorded={true} />
         </div>
       )}
     </div>
