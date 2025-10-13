@@ -1,4 +1,4 @@
-import { FaFolderOpen, FaSave, FaBook, FaGithub, FaVideo, FaImages } from "react-icons/fa";
+import { FaBook, FaGithub, FaImages } from "react-icons/fa";
 
 import "./AppBar.css";
 import { FaPerson } from "react-icons/fa6";

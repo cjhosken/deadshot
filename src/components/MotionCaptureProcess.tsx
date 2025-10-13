@@ -12,7 +12,7 @@ interface ProcessingFile {
   previewUrl: string;
 }
 
-export default function MotionCaptureProcess({ onGoHome }: { onGoHome: () => void }) {
+export default function MotionCaptureProcess() {
   const [files, setFiles] = useState<ProcessingFile[]>([]);
   const [processing, setProcessing] = useState(false);
   const [showViewport, setShowViewport] = useState(false);

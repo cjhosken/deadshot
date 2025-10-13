@@ -18,7 +18,7 @@ function App() {
         }
         {
           context === "process" && (
-            <MotionCaptureProcess onGoHome={() => setContext("mocap") } />
+            <MotionCaptureProcess/>
           )
         }
       </div>

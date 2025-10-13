@@ -20,8 +20,6 @@ export default function MotionCaptureLive() {
     const [countdown, setCountdown] = useState(5);
     const [recorded, setRecorded] = useState(false);
 
-    const [frameCount, setFrameCount] = useState(0);
-    const frameRef = useRef(0);
     const frameIntervalRef = useRef<number | null>(null);
 
     const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(null);
@@ -93,24 +91,6 @@ export default function MotionCaptureLive() {
         setCountdown(5);
         setPoseHistory([]);
         setRecorded(false);
-
-        const interval = setInterval(() => {
-            setCountdown(prev => {
-                if (prev <= 1) {
-                    clearInterval(interval);
-                    setShowCountdown(false);
-                    setIsRecording(true);
-                    frameRef.current = 0;
-                    setFrameCount(0);
-                    frameIntervalRef.current = window.setInterval(() => {
-                        frameRef.current += 1;
-                        setFrameCount(frameRef.current);
-                    }, 1000 / 24);
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
     };
 
     const handleStop = () => {
