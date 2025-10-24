@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import './MotionCaptureLive.css';
-import Viewport from './Viewport';
+import Viewport from '../Viewport/Viewport';
 import { FaSave, FaTrash } from 'react-icons/fa';
 import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 import * as THREE from 'three';
@@ -26,6 +26,14 @@ export default function MotionCaptureLive() {
     const [poseData, setPoseData] = useState<any | null>(null);
     const [poseHistory, setPoseHistory] = useState<any[]>([]);
 
+    const [phase, setPhase] = useState<'tpose' | 'demo' | 'countdown' | 'recording' | 'review'>('demo');
+    const [tposeDetected, setTPoseDetected] = useState(false);
+    const tposeTimerRef = useRef<number | null>(null);
+
+
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+
     // --- Setup BlazePose ---
     useEffect(() => {
         async function initPose() {
@@ -44,6 +52,82 @@ export default function MotionCaptureLive() {
         }
         initPose();
     }, []);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        const video = videoRef.current;
+        if (!canvas || !video || !poseData) return;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        // Match video size
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = "#0971e8";
+        ctx.fillStyle = "#e86209";
+        ctx.lineWidth = 2;
+
+        // Draw points
+        poseData.forEach((landmark: any) => {
+            const x = landmark.x * canvas.width;
+            const y = landmark.y * canvas.height;
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+
+        // Draw some key connections (example: shoulders–wrists)
+        const drawLine = (a: number, b: number) => {
+            const p1 = poseData[a];
+            const p2 = poseData[b];
+            if (!p1 || !p2) return;
+            ctx.beginPath();
+            ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+            ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+            ctx.stroke();
+        };
+
+        drawLine(11, 13); // left shoulder to left elbow
+        drawLine(13, 15); // left elbow to left wrist
+        drawLine(12, 14); // right shoulder to right elbow
+        drawLine(14, 16); // right elbow to right wrist
+        drawLine(11, 12); // shoulders
+        drawLine(23, 24); // hips
+        drawLine(11, 23); // left side
+        drawLine(12, 24); // right side
+    }, [poseData]);
+
+
+    useEffect(() => {
+        if (!poseData || phase !== 'tpose') return;
+
+        const leftShoulder = poseData[11];
+        const rightShoulder = poseData[12];
+        const leftWrist = poseData[15];
+        const rightWrist = poseData[16];
+
+        if (!leftShoulder || !rightShoulder || !leftWrist || !rightWrist) return;
+
+        const yAligned = Math.abs(leftWrist.y - leftShoulder.y) < 0.1 &&
+            Math.abs(rightWrist.y - rightShoulder.y) < 0.1;
+        const armsOut = leftWrist.x < leftShoulder.x - 0.1 &&
+            rightWrist.x > rightShoulder.x + 0.1;
+
+        if (yAligned && armsOut) {
+            if (!tposeTimerRef.current) {
+                tposeTimerRef.current = window.setTimeout(() => setTPoseDetected(true), 1000);
+            }
+        } else {
+            if (tposeTimerRef.current) {
+                clearTimeout(tposeTimerRef.current);
+                tposeTimerRef.current = null;
+            }
+            setTPoseDetected(false);
+        }
+    }, [poseData, phase]);
 
     // --- Pose detection ---
     useEffect(() => {
@@ -161,8 +245,6 @@ export default function MotionCaptureLive() {
         );
     };
 
-    const handleCancel = () => setRecorded(false);
-
     // --- Camera setup ---
     useEffect(() => {
         async function fetchDevices() {
@@ -203,45 +285,70 @@ export default function MotionCaptureLive() {
     }, [selectedDeviceId]);
 
     return (
-        <div id="container" className={isRecording ? 'recording' : ''}>
-            {showCountdown && <div className="countdown-overlay"><span>{countdown}</span></div>}
-
-            <div id="live-view">
-                <Viewport recorded={recorded} pose={poseData} history={poseHistory} />
-            </div>
-
-            {isRecording && <div id="frame-counter"><span>Frame: {poseHistory.length + 1}</span></div>}
-
-            <div id="camera-overlay">
-                <video ref={videoRef} autoPlay playsInline />
-                <div>
-                    <select value={selectedDeviceId} onChange={e => setSelectedDeviceId(e.target.value)}>
-                        {devices.map(device => (
-                            <option key={device.deviceId} value={device.deviceId}>
-                                {device.label || `Camera ${device.deviceId}`}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            <div id="record-bar">
-                {!recorded ? (
-                    <button
-                        id="record-button"
-                        className={`${isRecording ? "recording" : "idle"}`}
-                        title={isRecording ? "Stop" : "Record"}
-                        onClick={isRecording ? handleStop : handleRecord}
-                    />
-                ) : (
-                    <div id="record-actions">
-                        <div id="bar">
-                            <button className="iconButton" onClick={handleSave}><FaSave /></button>
-                            <button className="iconButton" onClick={handleCancel}><FaTrash /></button>
+        <div id="container" className={phase === 'recording' ? 'recording' : ''}>
+            {phase === "tpose" && (
+                <div className="tpose-phase">
+                    <div className="tpose-container">
+                        <div id="camera-overlay">
+                            <video ref={videoRef} autoPlay playsInline />
+                            <canvas ref={canvasRef}></canvas>
+                            <img src="images/tpose.png" />
+                        </div>
+                        <div className='camera-controls'>
+                            <select
+                                value={selectedDeviceId}
+                                onChange={(e) => setSelectedDeviceId(e.target.value)}
+                            >
+                                {devices.map((device) => (
+                                    <option key={device.deviceId} value={device.deviceId}>
+                                        {device.label || `Camera ${device.deviceId}`}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="tpose-overlay">
+                            <h2>Stand in a T-pose</h2>
+                            <p>Keep your arms straight out until calibration completes.</p>
+                            <button onClick={() => setPhase("demo")}> Cancel </button>
                         </div>
                     </div>
-                )}
+                </div>
+            )}
+
+            {phase === "countdown" && (
+                <div className="countdown-overlay"><span>{countdown}</span></div>
+            )}
+
+            <Viewport recorded={phase === "review"} pose={poseData} history={poseHistory} />
+
+            <div className='calibrate-overlay'>
+                <button
+                    onClick={() => setPhase("tpose")}
+                > Calibrate </button>
             </div>
+
+            {phase === "recording" || phase === "demo" && (
+                <div id="camera-preview">
+                    <video ref={videoRef} autoPlay playsInline />
+                    <canvas ref={canvasRef}></canvas>
+                </div>
+            )}
+
+            {(phase === "recording" || phase === "demo") && (
+                <button
+                    id="record-button"
+                    className={`${isRecording ? "recording" : "idle"}`}
+                    title={isRecording ? "Stop" : "Record"}
+                    onClick={isRecording ? handleStop : handleRecord}
+                />
+            )}
+
+            {phase === "review" && (
+                <div id="record-actions">
+                    <button onClick={handleSave}><FaSave /></button>
+                    <button onClick={() => setPhase('tpose')}><FaTrash /></button>
+                </div>
+            )}
         </div>
     );
 }

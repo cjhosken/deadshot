@@ -95,19 +95,6 @@ function Scene({
 }: SceneProps) {
   const accumulator = useRef(0);
 
-  // --- Load GLTF actor ---
-  const { scene: model } = useGLTF("assets/actor.glb");
-  const skeletonRef = useRef<THREE.Skeleton | null>(null);
-
-  useEffect(() => {
-    model.traverse((object) => {
-      if ((object as THREE.SkinnedMesh).isSkinnedMesh) {
-        const skinnedMesh = object as THREE.SkinnedMesh;
-        skeletonRef.current = skinnedMesh.skeleton;
-      }
-    });
-  }, [model]);
-
 function PoseDebug({ pose }: { pose: any[] }) {
   // --- build joint point cloud ---
   const points = useMemo(() => {
@@ -193,8 +180,6 @@ function PoseDebug({ pose }: { pose: any[] }) {
       <ambientLight intensity={0.4} />
       <directionalLight position={[3, 3, 3]} intensity={1} />
 
-      {/* Model + skeleton */}
-      <primitive object={model} />
       {/*<SkeletonHelper object={model} />*/}
       {pose?.length > 0 && <PoseDebug pose={pose} />}
 
