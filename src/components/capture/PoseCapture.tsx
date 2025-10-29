@@ -102,7 +102,7 @@ export function usePoseCapture(videoRef: React.RefObject<HTMLVideoElement | null
         };
 
         requestAnimationFrame(detectPose);
-    }, [poseLandmarker]);
+    }, [poseLandmarker, videoRef]);
 
     const startRecording = () => {
         if (poseRef.current && !tPose) calibrateTPose(poseRef.current);

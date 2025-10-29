@@ -58,14 +58,22 @@
 }
 
 .camera-controls select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   position: relative;
   padding: 1rem;
   width: 100%;
   border-radius: 16px;
-  background-color: black;
-  border: none;
+  background-color: #131313;
+  margin-top: 1rem;
+  border: 2px solid #333;
   outline: none;
   cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='20' width='20' viewBox='0 0 20 20'><path d='M5 8l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1rem;
 }
 
 .calibrate-overlay {

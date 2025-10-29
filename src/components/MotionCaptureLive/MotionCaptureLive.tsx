@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import './MotionCaptureLive.css';
 import Viewport from '../Viewport/Viewport';
-import { FaSave, FaTrash } from 'react-icons/fa';
 import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 import * as THREE from 'three';
 import { USDZExporter } from 'three/examples/jsm/exporters/USDZExporter.js';
@@ -321,12 +320,16 @@ export default function MotionCaptureLive() {
                         </div>
                         <div className="tpose-overlay">
                             <h2>Stand in a T-pose</h2>
-                            <p>Keep your arms straight out until calibration completes.</p>
+                            <p>Please keep within the frame and hold your arms straight out until calibration completes.</p>
                             <button onClick={() => setPhase("demo")}> Cancel </button>
+
+                            {tposeDetected}
                         </div>
                     </div>
                 </div>
             )}
+
+            
 
             {phase === "countdown" && (
                 <div className="countdown-overlay"><span>{countdown}</span></div>

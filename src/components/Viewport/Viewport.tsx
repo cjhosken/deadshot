@@ -1,6 +1,6 @@
 import "./Viewport.css";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, OrbitControls, useGLTF } from "@react-three/drei";
+import { Environment, OrbitControls } from "@react-three/drei";
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import * as THREE from "three";
 import Timeline from "./Timeline";
