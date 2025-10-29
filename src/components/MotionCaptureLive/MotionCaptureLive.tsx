@@ -306,7 +306,6 @@ export default function MotionCaptureLive() {
                         <div id="camera-overlay">
                             <video ref={videoRef} autoPlay playsInline />
                             <canvas ref={canvasRef}></canvas>
-                            <img src="images/tpose.png" />
                         </div>
                         <div className='camera-controls'>
                             <select
