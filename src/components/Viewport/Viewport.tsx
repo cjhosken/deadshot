@@ -7,11 +7,14 @@ import Timeline from "./Timeline";
 
 interface ViewportProps {
   recorded?: boolean;
+  recording?: boolean;
   pose?: any;
   history?: any[];
+  onSave:() => void;
+  onTrash:() => void;
 }
 
-export default function Viewport({ recorded, pose, history }: ViewportProps) {
+export default function Viewport({ recorded, pose, history, onSave, onTrash }: ViewportProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [frame, setFrame] = useState(0);
   const [fps] = useState(24);
@@ -41,8 +44,6 @@ export default function Viewport({ recorded, pose, history }: ViewportProps) {
     }
   }, [recorded, history]);
 
-
-
   return (
     <div id="viewport">
       {recorded && (
@@ -52,6 +53,8 @@ export default function Viewport({ recorded, pose, history }: ViewportProps) {
           frame={frame}
           duration={duration}
           onStop={onStop}
+          onSave={onSave}
+          onTrash={onTrash}
           onMouseDown={() => {}}
           onTouchStart={() => {}}
         />

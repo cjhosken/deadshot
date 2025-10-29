@@ -100,6 +100,12 @@ export default function MotionCaptureLive() {
         drawLine(12, 24); // right side
     }, [poseData]);
 
+    useEffect(() => {
+        if (videoRef.current && streamRef.current) {
+            videoRef.current.srcObject = streamRef.current;
+        }
+    }, [phase]);
+
 
     useEffect(() => {
         if (!poseData || phase !== 'tpose') return;
@@ -197,6 +203,7 @@ export default function MotionCaptureLive() {
             frameIntervalRef.current = null;
         }
         setRecorded(true);
+        setPhase("review");
     };
 
     const handleSave = () => {
@@ -243,6 +250,13 @@ export default function MotionCaptureLive() {
             },
             (error) => console.error('USDZ export failed', error)
         );
+    };
+
+    const handleTrash = () => {
+        console.log("Discarding recording...");
+        setRecorded(false);
+        setPoseHistory([]);
+        setPhase("demo"); // back to live preview
     };
 
     // --- Camera setup ---
@@ -319,7 +333,9 @@ export default function MotionCaptureLive() {
                 <div className="countdown-overlay"><span>{countdown}</span></div>
             )}
 
-            <Viewport recorded={phase === "review"} pose={poseData} history={poseHistory} />
+            <Viewport recording={phase === "recording"} recorded={recorded} pose={poseData} history={poseHistory} onSave={handleSave} onTrash={handleTrash} />
+
+            <div id='recording-frame' className={isRecording ? "recording" : ""}></div>
 
             <div className='calibrate-overlay'>
                 <button
@@ -327,27 +343,26 @@ export default function MotionCaptureLive() {
                 > Calibrate </button>
             </div>
 
-            {phase === "recording" || phase === "demo" && (
+            {((phase === "recording" || phase === "demo") && !recorded) && (
                 <div id="camera-preview">
                     <video ref={videoRef} autoPlay playsInline />
                     <canvas ref={canvasRef}></canvas>
                 </div>
             )}
 
-            {(phase === "recording" || phase === "demo") && (
+            {(!isRecording && showCountdown) && (
+                <div id="countdown-container">
+                    {countdown}
+                </div>
+            )}
+
+            {((phase === "recording" || phase === "demo") && !recorded) && (
                 <button
                     id="record-button"
                     className={`${isRecording ? "recording" : "idle"}`}
                     title={isRecording ? "Stop" : "Record"}
                     onClick={isRecording ? handleStop : handleRecord}
                 />
-            )}
-
-            {phase === "review" && (
-                <div id="record-actions">
-                    <button onClick={handleSave}><FaSave /></button>
-                    <button onClick={() => setPhase('tpose')}><FaTrash /></button>
-                </div>
             )}
         </div>
     );

@@ -1,4 +1,4 @@
-import { FaPause, FaPlay, FaStop } from "react-icons/fa";
+import { FaPause, FaPlay, FaSave, FaStop, FaTrash } from "react-icons/fa";
 import "./Timeline.css"
 
 interface TimelineProps {
@@ -7,6 +7,8 @@ interface TimelineProps {
   frame: number;
   duration: number;
   onStop: () => void;
+  onSave: () => void;
+  onTrash: () => void;
   onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
   onTouchStart: (e: React.TouchEvent<HTMLDivElement>) => void;
 }
@@ -17,6 +19,8 @@ export default function Timeline({
   frame,
   duration,
   onStop,
+  onSave,
+  onTrash,
   onMouseDown,
   onTouchStart
 }: TimelineProps) {
@@ -42,6 +46,12 @@ export default function Timeline({
           <div id="handle" style={{ left: `${(frame / duration) * 100}%` }}></div>
         </div>
         <div className="frameInfo">{duration}</div>
+        <button className="iconButton" onClick={onSave}>
+          <FaSave/>
+        </button>
+        <button className="iconButton" onClick={onTrash}>
+          <FaTrash/>
+        </button>
       </div>
     </div>
   );
