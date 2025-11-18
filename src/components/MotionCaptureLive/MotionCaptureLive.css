@@ -34,6 +34,12 @@
   box-shadow: black 0px 0px 25px;
 }
 
+#tpose-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
 #camera-overlay {
   position: relative; /* important: create a positioning context */
   display: flex;
@@ -140,6 +146,14 @@
   object-fit:cover;
   pointer-events: none; /* lets clicks pass through */
   border-radius: 16px;
+}
+
+#calibration-countdown {
+  position: absolute;
+  font-size: 6em;
+  color: var(--primary);
+  text-shadow: 0px 0px 10px rgba(0, 0, 0, 0.7);
+  z-index: 100;
 }
 
 #countdown-container {

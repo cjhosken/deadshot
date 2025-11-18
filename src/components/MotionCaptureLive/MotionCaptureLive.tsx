@@ -5,33 +5,26 @@ import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 import * as THREE from 'three';
 import { USDZExporter } from 'three/examples/jsm/exporters/USDZExporter.js';
 
+
 export default function MotionCaptureLive() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
     const streamRef = useRef<MediaStream | null>(null);
-
     const [isRecording, setIsRecording] = useState(false);
     const isRecordingRef = useRef(isRecording);
     useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
-
     const [showCountdown, setShowCountdown] = useState(false);
     const [countdown, setCountdown] = useState(5);
     const [recorded, setRecorded] = useState(false);
-
     const frameIntervalRef = useRef<number | null>(null);
-
     const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(null);
     const [poseData, setPoseData] = useState<any | null>(null);
     const [poseHistory, setPoseHistory] = useState<any[]>([]);
-
     const [phase, setPhase] = useState<'tpose' | 'demo' | 'countdown' | 'recording' | 'review'>('demo');
-    const [tposeDetected, setTPoseDetected] = useState(false);
-    const tposeTimerRef = useRef<number | null>(null);
-
-
     const canvasRef = useRef<HTMLCanvasElement>(null);
-
+    const [calibrationCountdown, setCalibrationCountdown] = useState<number | null>(null);
+    const [calibrationPose, setCalibrationPose] = useState<any | null>(null);
 
     // --- Setup BlazePose ---
     useEffect(() => {
@@ -105,35 +98,6 @@ export default function MotionCaptureLive() {
         }
     }, [phase]);
 
-
-    useEffect(() => {
-        if (!poseData || phase !== 'tpose') return;
-
-        const leftShoulder = poseData[11];
-        const rightShoulder = poseData[12];
-        const leftWrist = poseData[15];
-        const rightWrist = poseData[16];
-
-        if (!leftShoulder || !rightShoulder || !leftWrist || !rightWrist) return;
-
-        const yAligned = Math.abs(leftWrist.y - leftShoulder.y) < 0.1 &&
-            Math.abs(rightWrist.y - rightShoulder.y) < 0.1;
-        const armsOut = leftWrist.x < leftShoulder.x - 0.1 &&
-            rightWrist.x > rightShoulder.x + 0.1;
-
-        if (yAligned && armsOut) {
-            if (!tposeTimerRef.current) {
-                tposeTimerRef.current = window.setTimeout(() => setTPoseDetected(true), 1000);
-            }
-        } else {
-            if (tposeTimerRef.current) {
-                clearTimeout(tposeTimerRef.current);
-                tposeTimerRef.current = null;
-            }
-            setTPoseDetected(false);
-        }
-    }, [poseData, phase]);
-
     // --- Pose detection ---
     useEffect(() => {
         if (!poseLandmarker || !videoRef.current) return;
@@ -157,7 +121,8 @@ export default function MotionCaptureLive() {
                 ) {
                     const results = poseLandmarker.detectForVideo(videoRef.current, now);
                     if (results.landmarks?.[0]) {
-                        setPoseData(results.landmarks[0]); // always update live pose
+                        setPoseData(results.landmarks[0]);
+
                         if (isRecordingRef.current) {
                             setPoseHistory(prev => [
                                 ...prev,
@@ -173,7 +138,7 @@ export default function MotionCaptureLive() {
 
         requestAnimationFrame(detectPose);
         return () => { running = false; };
-    }, [poseLandmarker, recorded]);
+    }, [poseLandmarker, recorded, calibrationPose]);
 
     const handleRecord = () => {
         setShowCountdown(true);
@@ -205,6 +170,33 @@ export default function MotionCaptureLive() {
         setPhase("review");
     };
 
+    const startCalibration = () => {
+        setCalibrationCountdown(5);
+
+        let counter = 5;
+        const interval = setInterval(() => {
+            counter -= 1;
+            setCalibrationCountdown(counter);
+            
+            if (counter <= 0) {
+                clearInterval(interval);
+                setCalibrationCountdown(null);
+                finishCalibration();
+            }
+        }, 1000);
+    };
+
+    const finishCalibration = () => {
+        if (poseData && poseData.length) {
+            setCalibrationPose(poseData);
+            console.log("Calibration pose set:", poseData);
+        } else {
+            console.warn("No valid pose data for calibration yet");
+        }
+        setCalibrationCountdown(null);
+        setPhase("demo");
+    };
+
     const handleSave = () => {
         if (!poseHistory.length) return;
 
@@ -233,7 +225,6 @@ export default function MotionCaptureLive() {
             bone.position.set(x, y, z);
             skeleton.add(bone);
         });
-
 
         scene.add(skeleton);
 
@@ -305,6 +296,9 @@ export default function MotionCaptureLive() {
                         <div id="camera-overlay">
                             <video ref={videoRef} autoPlay playsInline />
                             <canvas ref={canvasRef}></canvas>
+                            {calibrationCountdown} && (
+                                <div id="calibration-countdown">{calibrationCountdown}</div>
+                            )
                         </div>
                         <div className='camera-controls'>
                             <select
@@ -320,22 +314,21 @@ export default function MotionCaptureLive() {
                         </div>
                         <div className="tpose-overlay">
                             <h2>Stand in a T-pose</h2>
-                            <p>Please keep within the frame and hold your arms straight out until calibration completes.</p>
-                            <button onClick={() => setPhase("demo")}> Cancel </button>
-
-                            {tposeDetected}
+                            <p>Please keep within the frame until calibration completes.</p>
+                            <div id="tpose-buttons">
+                                <button onClick={() => startCalibration()}> Calibrate </button>
+                                <button onClick={() => setPhase("demo")}> Cancel </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            
-
             {phase === "countdown" && (
                 <div className="countdown-overlay"><span>{countdown}</span></div>
             )}
 
-            <Viewport recording={phase === "recording"} recorded={recorded} pose={poseData} history={poseHistory} onSave={handleSave} onTrash={handleTrash} />
+            <Viewport recording={phase === "recording"} recorded={recorded} pose={poseData} calibrationPose={calibrationPose} history={poseHistory} onSave={handleSave} onTrash={handleTrash}/>
 
             <div id='recording-frame' className={isRecording ? "recording" : ""}></div>
 
