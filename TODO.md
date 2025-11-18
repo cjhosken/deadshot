@@ -1,16 +1,14 @@
 # TODO
 
 ## UI
-    - Responsive UI for Desktop and Web
-    - Nicer MotionClip dropdown styling (animations?)
-    - Viewport Timeline 
+    - Kill Calibration stuff?
 
-## Mocap Live
-    - access webcam
-
-## Mocap Processed
-    - find a way to upload videos (and show thumnbails for them)
+## Mocap
+    - Fix bone orientations (stop the bending)
+    - Smoothing
+    - Adjust floor snapping
+    - Jumping?
+    - Hand tracking?
 
 ## IO
-    - Export FBX
-    - Project saving (with motion clips)
+    - Export FBX or GLB

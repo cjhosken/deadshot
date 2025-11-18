@@ -102,6 +102,14 @@ function averagePoints(a, b) {
   };
 }
 
+function distance(a, b) {
+  return Math.sqrt(
+    (a.x - b.x) * (a.x - b.x) +
+    (a.y - b.y) * (a.y - b.y) +
+    (a.z - b.z) * (a.z - b.z)
+  );
+}
+
 function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, calibrationPose }: SceneProps) {
   const accumulator = useRef(0);
 
@@ -111,7 +119,7 @@ function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, cal
   const processedCalibrationPose = useMemo(() => {
     if (!calibrationPose) return null;
     return calibrationPose.map((p: any) => ({
-      x: p.x,
+      x: p.x ,
       y: -p.y,
       z: -p.z
     }));
@@ -199,6 +207,8 @@ function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, cal
       const boneForwardLocal = boneForwardWorld.clone().applyQuaternion(parentWorldQuatInv).normalize();
       const targetDirLocal = targetDirWorld.clone().applyQuaternion(parentWorldQuatInv).normalize();
 
+      
+
       // now create quaternion that rotates boneForwardLocal -> targetDirLocal
       tmpQuat.setFromUnitVectors(boneForwardLocal, targetDirLocal);
 
@@ -229,7 +239,7 @@ function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, cal
     }
 
     // hips in your original code used averages of some indices:
-    applyBoneByPose("C_hips_JNT", 23, 24, 11, 12, 0.5);
+    applyBoneByPose("C_hips_JNT", 23, 24, 11, 12, 0.8);
     applyBoneByPose("C_neck_JNT", 11, 12, 0, 0, 0.8);
   }
 
@@ -257,6 +267,10 @@ function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, cal
     }
 
     hipBone.translateZ(lowestY * 100);
+
+    const scale = 1 / distance(livePose[12], livePose[24]);
+
+    hipBone.position.setY(-scale * 50);
   }
 
   // --- PoseDebug component for rendering joints + bones ---
