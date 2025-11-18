@@ -102,29 +102,6 @@ function averagePoints(a, b) {
   };
 }
 
-function normalize(pose : any[]) {
-
-    const scale = 0.3 / distance(pose[11], pose[12]);
-
-    const offsetX = -averagePoints(pose[11], pose[12]).x;
-    const offsetY = Math.max(...pose.map((p: any) => p.y));
-    const offsetZ = 0;
-
-
-    return pose.map((p: any) => ({
-      x: (p.x + offsetX) * scale,
-      y: (-p.y + offsetY) * scale,
-      z: (-p.z + offsetZ) * scale
-    }));
-}
-
-function distance(a, b) {
-  const x = (a.x - b.x);
-  const y = (a.y - b.y);
-  const z = (a.z - b.z);
-  return Math.sqrt(x * x + y * y + z * z);
-}
-
 function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, calibrationPose }: SceneProps) {
   const accumulator = useRef(0);
 
@@ -133,22 +110,20 @@ function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, cal
 
   const processedCalibrationPose = useMemo(() => {
     if (!calibrationPose) return null;
-
-    const normalized = normalize(calibrationPose);
-
-    return normalized;
+    return calibrationPose.map((p: any) => ({
+      x: p.x,
+      y: -p.y,
+      z: -p.z
+    }));
   }, [calibrationPose]);
 
   const processedPose = useMemo(() => {
     if (!livePose) return null;
-
-    const normalized = normalize(livePose);
-
-    if (processedCalibrationPose && processedCalibrationPose.length === livePose.length) {
-      console.log("Applying calibration to live pose");
-    }
-
-    return normalized;
+    return livePose.map((p: any) => ({
+      x: p.x,
+      y: -p.y,
+      z: -p.z
+    }));
   }, [livePose]);
 
   useEffect(() => {
@@ -164,47 +139,124 @@ function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, cal
     const skinnedMesh = actor.getObjectByProperty('type', 'SkinnedMesh') as THREE.SkinnedMesh;
     if (!skinnedMesh) return;
 
-    let boneForward = new THREE.Vector3(0, 1, 0);
-
     const skeleton = skinnedMesh.skeleton;
+    const tmpV1 = new THREE.Vector3();
+    const tmpV2 = new THREE.Vector3();
+    const tmpQuat = new THREE.Quaternion();
+
+    // helper: compute world-space forward for a bone:
+    function computeBoneWorldForward(bone: THREE.Bone): THREE.Vector3 {
+      // prefer vector from bone -> first child (common rig convention)
+      if (bone.children && bone.children.length > 0) {
+        bone.getWorldPosition(tmpV1);
+        bone.children[0].getWorldPosition(tmpV2);
+        const v = tmpV2.sub(tmpV1);
+        if (v.lengthSq() > 1e-8) return v.normalize();
+      }
+      // fallback: use bone's -Z world direction (Object3D.getWorldDirection returns -Z)
+      const dir = new THREE.Vector3();
+      bone.getWorldDirection(dir); // returns direction of -Z axis in world space
+      dir.negate(); // now it's +Z
+      if (dir.lengthSq() > 1e-8) return dir.normalize();
+      // ultimate fallback
+      return new THREE.Vector3(0, 1, 0);
+    }
+
+    // helper: map pose points -> world-space Vector3
+    // NOTE: YOU MUST ADJUST THIS mapping to match your pose data coordinate system.
+    function posePointToVector(p: any): THREE.Vector3 {
+      // Common mapping assumption: pose.x = right (X), pose.y = up (Y), pose.z = forward (Z)
+      // If your pose data uses a different ordering (e.g. y<->z swapped), change here.
+      return new THREE.Vector3(p.x, p.y, p.z);
+    }
+
     for (const boneName in bonePoseMap) {
-      boneForward = new THREE.Vector3(0, 0, 1);
       const bone = skeleton.getBoneByName(boneName);
       if (!bone) continue;
 
       const { fromIndex, toIndex } = bonePoseMap[boneName];
-      const from = pose[fromIndex];
-      const to = pose[toIndex];
+      const fromP = pose[fromIndex];
+      const toP = pose[toIndex];
+      if (!fromP || !toP) continue;
 
-      if (!from || !to) continue;
+      // build target direction in world space (from pose)
+      const fromV = posePointToVector(fromP);
+      const toV = posePointToVector(toP);
+      const targetDirWorld = new THREE.Vector3().subVectors(toV, fromV);
+      if (targetDirWorld.lengthSq() < 1e-8) continue;
+      targetDirWorld.normalize();
 
-      const dir = new THREE.Vector3(to.x - from.x, to.y - from.y, to.z - from.z).normalize();
+      // compute current bone forward in world space
+      const boneForwardWorld = computeBoneWorldForward(bone); // already normalized
 
-      const quaternion = new THREE.Quaternion().setFromUnitVectors(boneForward, dir);
-      bone.quaternion.slerp(quaternion, 0.5);
+      // convert BOTH world-space vectors into bone.parent's local space
+      // so setFromUnitVectors is applied in the same space that bone.quaternion is defined in.
+      const parent = bone.parent || skinnedMesh; // ensure there's a parent
+      const parentWorldQuat = new THREE.Quaternion();
+      parent.getWorldQuaternion(parentWorldQuat);
+      const parentWorldQuatInv = parentWorldQuat.clone().invert();
+
+      const boneForwardLocal = boneForwardWorld.clone().applyQuaternion(parentWorldQuatInv).normalize();
+      const targetDirLocal = targetDirWorld.clone().applyQuaternion(parentWorldQuatInv).normalize();
+
+      // now create quaternion that rotates boneForwardLocal -> targetDirLocal
+      tmpQuat.setFromUnitVectors(boneForwardLocal, targetDirLocal);
+
+      // slerp the bone's local quaternion toward the target
+      bone.quaternion.slerp(tmpQuat, 0.5);
     }
 
-    const hips = skeleton.getBoneByName("C_hips_JNT");
+    // Example for hips and neck using same mapping + parent-space approach:
+    function applyBoneByPose(boneName: string, fromIdxA: number, fromIdxB: number, toIdxA: number, toIdxB: number, weight = 0.5) {
+      const bone = skeleton.getBoneByName(boneName);
+      if (!bone) return;
+      const from = averagePoints(pose[fromIdxA], pose[fromIdxB]);
+      const to = averagePoints(pose[toIdxA], pose[toIdxB]);
+      if (!from || !to) return;
+      const targetDirWorld = new THREE.Vector3(to.x - from.x, to.y - from.y, to.z - from.z).normalize();
+      const boneForwardWorld = computeBoneWorldForward(bone);
 
-    const hips_from = averagePoints(pose[23], pose[24]);
-    const hips_to = averagePoints(pose[11], pose[12]);
+      const parent = bone.parent || skinnedMesh;
+      const parentWorldQuat = new THREE.Quaternion();
+      parent.getWorldQuaternion(parentWorldQuat);
+      const parentWorldQuatInv = parentWorldQuat.clone().invert();
 
-    const hips_dir = new THREE.Vector3(hips_to.x - hips_from.x, hips_to.y - hips_from.y, hips_to.z - hips_from.z).normalize();
-    const hips_quat = new THREE.Quaternion().setFromUnitVectors(boneForward, hips_dir);
-    hips.quaternion.slerp(hips_quat, 0.5);
+      const boneForwardLocal = boneForwardWorld.clone().applyQuaternion(parentWorldQuatInv).normalize();
+      const targetDirLocal = targetDirWorld.clone().applyQuaternion(parentWorldQuatInv).normalize();
 
-    const neck = skeleton.getBoneByName("C_neck_JNT");
+      tmpQuat.setFromUnitVectors(boneForwardLocal, targetDirLocal);
+      bone.quaternion.slerp(tmpQuat, weight);
+    }
 
-    const neck_from = averagePoints(pose[11], pose[12]);
-    const neck_to = pose[0];
-
-    const head_dir = new THREE.Vector3(neck_to.x - neck_from.x, neck_to.y - neck_from.y, neck_to.z - neck_from.z).normalize();
-    const head_quat = new THREE.Quaternion().setFromUnitVectors(boneForward, head_dir);
-    neck.quaternion.slerp(head_quat, 0.8);
+    // hips in your original code used averages of some indices:
+    applyBoneByPose("C_hips_JNT", 23, 24, 11, 12, 0.5);
+    applyBoneByPose("C_neck_JNT", 11, 12, 0, 0, 0.8);
   }
 
   function actorPostProcess() {
-    console.log("Actor post-processing step");
+    if (!actor || !livePose) return;
+    const skinnedMesh = actor.getObjectByProperty('type', 'SkinnedMesh') as THREE.SkinnedMesh;
+    if (!skinnedMesh) return;
+
+    const skeleton = skinnedMesh.skeleton;
+
+    const hipBone = skeleton.getBoneByName("C_hips_JNT");
+
+    const hip = averagePoints(livePose[23], livePose[24]);
+
+    console.log(hip);
+
+    hipBone.position.setX(-(hip.x - 0.5) * 100);
+
+    let lowestY = Infinity;
+    const tmp = new THREE.Vector3();
+
+    for (const bone of skeleton.bones) {
+      bone.getWorldPosition(tmp);
+      if (tmp.y < lowestY) lowestY = tmp.y;
+    }
+
+    hipBone.translateZ(lowestY * 100);
   }
 
   // --- PoseDebug component for rendering joints + bones ---
