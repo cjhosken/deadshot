@@ -26,6 +26,9 @@ export default function MotionCaptureLive() {
     const [calibrationCountdown, setCalibrationCountdown] = useState<number | null>(null);
     const [calibrationPose, setCalibrationPose] = useState<any | null>(null);
 
+    const [noCamera, setNoCamera] = useState(false); // NEW: tracks if a camera is available
+
+
     // --- Setup BlazePose ---
     useEffect(() => {
         async function initPose() {
@@ -177,7 +180,7 @@ export default function MotionCaptureLive() {
         const interval = setInterval(() => {
             counter -= 1;
             setCalibrationCountdown(counter);
-            
+
             if (counter <= 0) {
                 clearInterval(interval);
                 setCalibrationCountdown(null);
@@ -257,9 +260,16 @@ export default function MotionCaptureLive() {
                 const deviceInfos = await navigator.mediaDevices.enumerateDevices();
                 const videoDevices = deviceInfos.filter(d => d.kind === 'videoinput');
                 setDevices(videoDevices);
-                if (videoDevices.length > 0) setSelectedDeviceId(videoDevices[0].deviceId);
+                if (videoDevices.length > 0) {
+                    setSelectedDeviceId(videoDevices[0].deviceId);
+                    setNoCamera(false); // NEW: set noCamera to false if video devices found
+                } else {
+                    setNoCamera(true); // NEW: set noCamera to true if no video devices found
+                }
             } catch (err) {
                 console.error('Error accessing camera', err);
+                setNoCamera(true); // NEW: set noCamera to true if no video devices found
+
             }
         }
         fetchDevices();
@@ -269,17 +279,30 @@ export default function MotionCaptureLive() {
         if (!selectedDeviceId) return;
 
         async function startCamera() {
-            if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
-
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+                streamRef.current = null;
+            }
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { deviceId: { exact: selectedDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24 }, autoGainControl: true }
                 });
+
+                if (!stream || stream.getVideoTracks().length === 0) {
+                    setNoCamera(true); // No video track available
+                    return;
+                }
+
                 streamRef.current = stream;
                 if (videoRef.current) videoRef.current.srcObject = stream;
-            } catch (err) { console.error('Error starting camera', err); }
+                setNoCamera(false);
+            } catch (err: any) {
+                console.error('Error accessing camera', err);
+                setNoCamera(true); // Treat all errors (NotAllowedError, NotFoundError, etc.) as no webcam
+            }
         }
 
+        if (noCamera) return; // NEW: do not start camera if noCamera is true
         startCamera();
 
         return () => {
@@ -290,6 +313,15 @@ export default function MotionCaptureLive() {
 
     return (
         <div id="container" className={phase === 'recording' ? 'recording' : ''}>
+            {noCamera && (
+                <div className="no-camera-popup">
+                    <div>
+                        <h1>No webcam detected!</h1>
+                        <p>Please connect a webcam to continue.</p>
+                    </div>
+                </div>
+            )}
+
             {phase === "tpose" && (
                 <div className="tpose-phase">
                     <div className="tpose-container">
@@ -297,7 +329,7 @@ export default function MotionCaptureLive() {
                             <video ref={videoRef} autoPlay playsInline />
                             <canvas ref={canvasRef}></canvas>
                             {calibrationCountdown} && (
-                                <div id="calibration-countdown">{calibrationCountdown}</div>
+                            <div id="calibration-countdown">{calibrationCountdown}</div>
                             )
                         </div>
                         <div className='camera-controls'>
@@ -328,7 +360,7 @@ export default function MotionCaptureLive() {
                 <div className="countdown-overlay"><span>{countdown}</span></div>
             )}
 
-            <Viewport recording={phase === "recording"} recorded={recorded} pose={poseData} calibrationPose={calibrationPose} history={poseHistory} onSave={handleSave} onTrash={handleTrash}/>
+            <Viewport recording={phase === "recording"} recorded={recorded} pose={poseData} calibrationPose={calibrationPose} history={poseHistory} onSave={handleSave} onTrash={handleTrash} />
 
             <div id='recording-frame' className={isRecording ? "recording" : ""}></div>
 
@@ -359,6 +391,7 @@ export default function MotionCaptureLive() {
                     onClick={isRecording ? handleStop : handleRecord}
                 />
             )}
+
         </div>
     );
 }
