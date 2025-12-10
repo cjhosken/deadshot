@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import './MotionCaptureLive.css';
 import Viewport from '../Viewport/Viewport';
 import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
-import * as THREE from 'three';
-import { USDZExporter } from 'three/examples/jsm/exporters/USDZExporter.js';
 
 
 export default function MotionCaptureLive() {
