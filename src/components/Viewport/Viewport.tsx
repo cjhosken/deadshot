@@ -1,10 +1,13 @@
 import "./Viewport.css";
 import { Canvas, useFrame, useLoader } from "@react-three/fiber";
 import { Environment, OrbitControls } from "@react-three/drei";
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect, useMemo, forwardRef, useImperativeHandle } from "react";
 import * as THREE from "three";
 import Timeline from "./Timeline";
 import { GLTFLoader } from "three/examples/jsm/Addons.js";
+import { GLTFExporter } from "three/examples/jsm/Addons.js";
+import { QuaternionKeyframeTrack, AnimationClip } from 'three';
+
 
 interface ViewportProps {
   recorded?: boolean;
@@ -12,16 +15,17 @@ interface ViewportProps {
   pose?: any;
   calibrationPose?: any;
   history?: any[];
-  onSave: () => void;
   onTrash: () => void;
 }
 
-export default function Viewport({ recorded, pose, calibrationPose, history, onSave, onTrash }: ViewportProps) {
+export default function Viewport({ recorded, pose, calibrationPose, history, onTrash }: ViewportProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [frame, setFrame] = useState(0);
   const [fps] = useState(24);
   const clock = useRef(new THREE.Clock(false));
   const currentFrame = useRef(0);
+
+  const sceneRef = useRef<any>(null); // Ref for Scene
 
   useEffect(() => {
     if (isPlaying) clock.current.start();
@@ -34,6 +38,7 @@ export default function Viewport({ recorded, pose, calibrationPose, history, onS
     if (recorded && history && history.length > 0) setDuration(history.length - 1);
   }, [recorded, history]);
 
+
   return (
     <div id="viewport">
       {recorded && (
@@ -43,7 +48,7 @@ export default function Viewport({ recorded, pose, calibrationPose, history, onS
           frame={frame}
           duration={duration}
           onStop={() => { currentFrame.current = 0; setFrame(0); setIsPlaying(false); clock.current.stop(); }}
-          onSave={onSave}
+          onSave={() => sceneRef.current?.handleSave()}
           onTrash={onTrash}
           onMouseDown={() => { }}
           onTouchStart={() => { }}
@@ -52,6 +57,7 @@ export default function Viewport({ recorded, pose, calibrationPose, history, onS
 
       <Canvas camera={{ position: [2, 2, 2], fov: 75 }} onCreated={({ gl }) => gl.setClearColor("#111", 1)}>
         <Scene
+          ref={sceneRef}
           isPlaying={isPlaying}
           fps={fps}
           duration={duration}
@@ -59,6 +65,7 @@ export default function Viewport({ recorded, pose, calibrationPose, history, onS
           currentFrame={currentFrame}
           livePose={recorded ? history?.[frame]?.pose : pose}
           calibrationPose={calibrationPose}
+          history={history}
         />
       </Canvas>
     </div>
@@ -73,6 +80,7 @@ interface SceneProps {
   currentFrame: React.MutableRefObject<number>;
   livePose?: any;
   calibrationPose?: any;
+  history?: any[];
 }
 
 type BonePoseMap = {
@@ -110,7 +118,7 @@ function distance(a, b) {
   );
 }
 
-function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, calibrationPose }: SceneProps) {
+const Scene = forwardRef(function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, calibrationPose, history }: SceneProps, ref) {
   const accumulator = useRef(0);
 
   const gltf = useLoader(GLTFLoader, 'assets/actor.glb');
@@ -119,7 +127,7 @@ function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, cal
   const processedCalibrationPose = useMemo(() => {
     if (!calibrationPose) return null;
     return calibrationPose.map((p: any) => ({
-      x: p.x ,
+      x: p.x,
       y: -p.y,
       z: -p.z
     }));
@@ -207,7 +215,7 @@ function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, cal
       const boneForwardLocal = boneForwardWorld.clone().applyQuaternion(parentWorldQuatInv).normalize();
       const targetDirLocal = targetDirWorld.clone().applyQuaternion(parentWorldQuatInv).normalize();
 
-      
+
 
       // now create quaternion that rotates boneForwardLocal -> targetDirLocal
       tmpQuat.setFromUnitVectors(boneForwardLocal, targetDirLocal);
@@ -253,8 +261,6 @@ function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, cal
     const hipBone = skeleton.getBoneByName("C_hips_JNT");
 
     const hip = averagePoints(livePose[23], livePose[24]);
-
-    console.log(hip);
 
     hipBone.position.setX(-(hip.x - 0.5) * 100);
 
@@ -337,6 +343,77 @@ function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, cal
     }
   });
 
+  function bakeAnimation(skinnedMesh: THREE.SkinnedMesh, history: any[], fps: number) {
+    const skeleton = skinnedMesh.skeleton;
+    const tracks: THREE.KeyframeTrack[] = [];
+
+    // Prepare empty arrays for each bone
+    const timesPerBone: number[][] = skeleton.bones.map(() => []);
+    const valuesPerBone: number[][] = skeleton.bones.map(() => []);
+
+
+    history.forEach((frameData, frameIndex) => {
+      let pose = frameData.pose;
+
+      pose = pose.map((p: any) => ({
+        x: p.x,
+        y: -p.y,
+        z: -p.z
+      }));
+
+      // Apply the pose to skeleton
+      applyPoseToActor(pose);
+      actorPostProcess();
+
+      skeleton.bones.forEach((bone, i) => {
+        timesPerBone[i].push(frameIndex / fps);
+        valuesPerBone[i].push(bone.quaternion.x, bone.quaternion.y, bone.quaternion.z, bone.quaternion.w);
+      });
+    });
+
+    skeleton.bones.forEach((bone, i) => {
+      tracks.push(
+        new QuaternionKeyframeTrack(
+          `${bone.name}.quaternion`,
+          timesPerBone[i],
+          valuesPerBone[i]
+        )
+      );
+    });
+
+    return new AnimationClip('ActorAnimation', history.length / fps, tracks);
+  }
+
+
+  function handleSave() {
+    console.log("Saving GLTF...");
+    const skinnedMesh = actor.getObjectByProperty('type', 'SkinnedMesh') as THREE.SkinnedMesh;
+    if (!skinnedMesh) return;
+
+    const clip = bakeAnimation(skinnedMesh, history, fps);
+    if (!clip) return;
+
+    const exporter = new GLTFExporter();
+    exporter.parse(
+      actor,
+      (result) => {
+        const blob = new Blob([JSON.stringify(result)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "scene.gltf";
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      () => { },
+      { binary: false, animations: [clip] }
+    );
+  }
+
+  useImperativeHandle(ref, () => ({
+    handleSave
+  }));
+
   return (
     <>
       <ambientLight intensity={0.4} />
@@ -357,7 +434,7 @@ function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, cal
       <OrbitControls enableDamping dampingFactor={0.1} rotateSpeed={0.5} zoomSpeed={1.0} panSpeed={0.5} target={[0, 0.5, 0]} />
     </>
   );
-}
+});
 
 function Grid() {
   const material = useRef<THREE.ShaderMaterial>(null);

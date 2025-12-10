@@ -200,51 +200,6 @@ export default function MotionCaptureLive() {
         setPhase("demo");
     };
 
-    const handleSave = () => {
-        if (!poseHistory.length) return;
-
-        const firstFrame = poseHistory[0].pose;
-        if (!firstFrame || !firstFrame.length) {
-            console.error('No valid pose data to export.');
-            return;
-        }
-
-        const scene = new THREE.Scene();
-        const skeleton = new THREE.Group();
-
-        interface Landmark {
-            x: number;
-            y: number;
-            z: number;
-        }
-
-        (firstFrame as Landmark[]).forEach((landmark: Landmark, index: number) => {
-            if (!landmark) return;
-            const bone = new THREE.Object3D();
-            bone.name = `joint_${index}`;
-            const x = landmark.x ?? 0;
-            const y = landmark.y ?? 0;
-            const z = landmark.z ?? 0;
-            bone.position.set(x, y, z);
-            skeleton.add(bone);
-        });
-
-        scene.add(skeleton);
-
-        const exporter = new USDZExporter();
-        exporter.parse(
-            scene,
-            (result) => {
-                const blob = new Blob([result], { type: 'model/vnd.usdz+zip' });
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = 'motion_capture.usdz';
-                a.click();
-            },
-            (error) => console.error('USDZ export failed', error)
-        );
-    };
-
     const handleTrash = () => {
         console.log("Discarding recording...");
         setRecorded(false);
@@ -360,7 +315,7 @@ export default function MotionCaptureLive() {
                 <div className="countdown-overlay"><span>{countdown}</span></div>
             )}
 
-            <Viewport recording={phase === "recording"} recorded={recorded} pose={poseData} calibrationPose={calibrationPose} history={poseHistory} onSave={handleSave} onTrash={handleTrash} />
+            <Viewport recording={phase === "recording"} recorded={recorded} pose={poseData} calibrationPose={calibrationPose} history={poseHistory} onTrash={handleTrash} />
 
             <div id='recording-frame' className={isRecording ? "recording" : ""}></div>
 
