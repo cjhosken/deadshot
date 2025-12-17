@@ -1,154 +1,92 @@
-import "./Viewport.css";
-import { Canvas, useFrame, useLoader } from "@react-three/fiber";
+import { useFrame, useLoader } from "@react-three/fiber";
 import { Environment, OrbitControls } from "@react-three/drei";
-import { useRef, useState, useEffect, useMemo, forwardRef, useImperativeHandle } from "react";
+import { useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from "react";
 import * as THREE from "three";
-import Timeline from "./Timeline";
 import { GLTFLoader } from "three/examples/jsm/Addons.js";
 import { GLTFExporter } from "three/examples/jsm/Addons.js";
-import { QuaternionKeyframeTrack, AnimationClip } from 'three';
-
-
-interface ViewportProps {
-  recorded?: boolean;
-  recording?: boolean;
-  pose?: any;
-  calibrationPose?: any;
-  history?: any[];
-  onTrash: () => void;
-}
-
-export default function Viewport({ recorded, pose, calibrationPose, history, onTrash }: ViewportProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [frame, setFrame] = useState(0);
-  const [fps] = useState(24);
-  const clock = useRef(new THREE.Clock(false));
-  const currentFrame = useRef(0);
-
-  const sceneRef = useRef<any>(null); // Ref for Scene
-
-  useEffect(() => {
-    if (isPlaying) clock.current.start();
-    else clock.current.stop();
-  }, [isPlaying]);
-
-  const [duration, setDuration] = useState(120);
-
-  useEffect(() => {
-    if (recorded && history && history.length > 0) setDuration(history.length - 1);
-  }, [recorded, history]);
-
-
-  return (
-    <div id="viewport">
-      {recorded && (
-        <Timeline
-          isPlaying={isPlaying}
-          togglePlay={() => setIsPlaying(prev => !prev)}
-          frame={frame}
-          duration={duration}
-          onStop={() => { currentFrame.current = 0; setFrame(0); setIsPlaying(false); clock.current.stop(); }}
-          onSave={() => sceneRef.current?.handleSave()}
-          onTrash={onTrash}
-          onMouseDown={() => { }}
-          onTouchStart={() => { }}
-        />
-      )}
-
-      <Canvas camera={{ position: [2, 2, 2], fov: 75 }} onCreated={({ gl }) => gl.setClearColor("#111", 1)}>
-        <Scene
-          ref={sceneRef}
-          isPlaying={isPlaying}
-          fps={fps}
-          duration={duration}
-          setFrame={setFrame}
-          currentFrame={currentFrame}
-          livePose={recorded ? history?.[frame]?.pose : pose}
-          calibrationPose={calibrationPose}
-          history={history}
-        />
-      </Canvas>
-    </div>
-  );
-}
 
 interface SceneProps {
-  isPlaying: boolean;
+  isRecording: boolean;
+  hasRecorded: boolean;
   fps: number;
-  duration: number;
-  setFrame: (f: number) => void;
-  currentFrame: React.MutableRefObject<number>;
-  livePose?: any;
+  playbackFrame: number;
+  pose?: any;
   calibrationPose?: any;
-  history?: any[];
+  showDebug: boolean;
+  durationCallback: (value: number) => void;
 }
 
-type BonePoseMap = {
-  [boneName: string]: { fromIndex: number; toIndex: number };
-};
-
-const bonePoseMap: BonePoseMap = {
-  L_hand_JNT: { fromIndex: 15, toIndex: 17 },
-  R_hand_JNT: { fromIndex: 16, toIndex: 18 },
-  R_forearm_JNT: { fromIndex: 14, toIndex: 16 },
-  L_forearm_JNT: { fromIndex: 13, toIndex: 15 },
-  R_arm_JNT: { fromIndex: 12, toIndex: 14 },
-  L_arm_JNT: { fromIndex: 11, toIndex: 13 },
-  L_thigh_JNT: { fromIndex: 23, toIndex: 25 },
-  R_thigh_JNT: { fromIndex: 24, toIndex: 26 },
-  L_knee_JNT: { fromIndex: 25, toIndex: 27 },
-  R_knee_JNT: { fromIndex: 26, toIndex: 28 },
-  L_foot_JNT: { fromIndex: 29, toIndex: 27 },
-  R_foot_JNt: { fromIndex: 30, toIndex: 28 },
-};
-
-function averagePoints(a, b) {
-  return {
-    x: (a.x + b.x) / 2,
-    y: (a.y + b.y) / 2,
-    z: (a.z + b.z) / 2
-  };
-}
-
-function distance(a, b) {
-  return Math.sqrt(
-    (a.x - b.x) * (a.x - b.x) +
-    (a.y - b.y) * (a.y - b.y) +
-    (a.z - b.z) * (a.z - b.z)
-  );
-}
-
-const Scene = forwardRef(function Scene({ isPlaying, fps, duration, setFrame, currentFrame, livePose, calibrationPose, history }: SceneProps, ref) {
-  const accumulator = useRef(0);
-
+export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRecorded, fps, durationCallback, playbackFrame, pose, calibrationPose, showDebug }: SceneProps, ref) {
   const gltf = useLoader(GLTFLoader, 'assets/actor.glb');
   const actor = gltf.scene;
 
-  const processedCalibrationPose = useMemo(() => {
-    if (!calibrationPose) return null;
-    return calibrationPose.map((p: any) => ({
-      x: p.x,
-      y: -p.y,
-      z: -p.z
-    }));
-  }, [calibrationPose]);
+  const mixer = useRef<THREE.AnimationMixer | null>(null);
+  const action = useRef<THREE.AnimationAction | null>(null);
+  const clip = useRef<THREE.AnimationClip | null>(null);
 
-  const processedPose = useMemo(() => {
-    if (!livePose) return null;
-    return livePose.map((p: any) => ({
-      x: p.x,
-      y: -p.y,
-      z: -p.z
-    }));
-  }, [livePose]);
+  const frameIndex = useRef(0);
+  const accumulator = useRef(0);
+
+  type BoneTrackData = {
+    times: number[];
+    positions: number[];
+    rotations: number[];
+  };
+
+  const recordedTracks = useRef<Map<string, BoneTrackData>>(new Map());
+
+  const normalizedCalibrationPose = useMemo(() => { return normalizePose(calibrationPose) }, [calibrationPose]);
+  const normalizedPose = useMemo(() => { return normalizePose(pose) }, [pose]);
 
   useEffect(() => {
-    if (processedPose) {
-      applyPoseToActor(processedPose);
+    if (isRecording) {
+      recordedTracks.current.clear();
+      frameIndex.current = 0;
+      accumulator.current = 0;
+    } else {
+      clip.current = buildAnimationClip();
+
+      const duration = clip.current.duration;
+      durationCallback(Math.floor(duration * fps));
+      mixer.current = new THREE.AnimationMixer(actor);
+      action.current = mixer.current.clipAction(clip.current);
+      action.current.play();
+      action.current.paused = true;
+    }
+  }, [isRecording, hasRecorded]);
+
+
+  useFrame((_, delta) => {
+    if (isRecording) {
+
+      const step = 1 / fps;
+      accumulator.current += delta;
+
+      while (accumulator.current >= step) {
+        const t = frameIndex.current / fps;
+        recordSkeletonFrame(t);
+        frameIndex.current++;
+        accumulator.current -= step;
+      }
+    } else {
+      if (mixer.current && action.current) {
+        const time = playbackFrame / fps;
+        action.current.time = time;
+        mixer.current.update(0);
+      }
+    }
+
+
+  });
+
+  useEffect(() => {
+    if (hasRecorded) return;
+
+    if (normalizedPose) {
+      applyPoseToActor(normalizedPose);
       actorPostProcess();
     }
-  }, [processedPose]);
-
+  }, [normalizedPose]);
 
   function applyPoseToActor(pose: any[]) {
     if (!actor || !pose) return;
@@ -252,7 +190,7 @@ const Scene = forwardRef(function Scene({ isPlaying, fps, duration, setFrame, cu
   }
 
   function actorPostProcess() {
-    if (!actor || !livePose) return;
+    if (!actor || !pose) return;
     const skinnedMesh = actor.getObjectByProperty('type', 'SkinnedMesh') as THREE.SkinnedMesh;
     if (!skinnedMesh) return;
 
@@ -260,7 +198,7 @@ const Scene = forwardRef(function Scene({ isPlaying, fps, duration, setFrame, cu
 
     const hipBone = skeleton.getBoneByName("C_hips_JNT");
 
-    const hip = averagePoints(livePose[23], livePose[24]);
+    const hip = averagePoints(pose[23], pose[24]);
 
     hipBone.position.setX(-(hip.x - 0.5) * 100);
 
@@ -274,7 +212,7 @@ const Scene = forwardRef(function Scene({ isPlaying, fps, duration, setFrame, cu
 
     hipBone.translateZ(lowestY * 100);
 
-    const scale = 1 / distance(livePose[12], livePose[24]);
+    const scale = 1 / distance(pose[12], pose[24]);
 
     hipBone.position.setY(-scale * 50);
   }
@@ -326,78 +264,73 @@ const Scene = forwardRef(function Scene({ isPlaying, fps, duration, setFrame, cu
     );
   };
 
-  // --- Frame update for playback ---
-  useFrame((_, delta) => {
-    if (!isPlaying || !livePose) return;
-    accumulator.current += delta;
-    const frameTime = 1 / fps;
-    if (accumulator.current >= frameTime) {
-      accumulator.current = 0;
-      currentFrame.current = (currentFrame.current + 1) % duration;
-      setFrame(currentFrame.current);
+  function recordSkeletonFrame(time: number) {
+    const skinnedMesh = actor.getObjectByProperty(
+      "type",
+      "SkinnedMesh"
+    ) as THREE.SkinnedMesh;
 
-      console.log("Applying pose for frame", currentFrame.current);
+    if (!skinnedMesh) return;
 
-      applyPoseToActor(processedPose);
-      actorPostProcess();
-    }
-  });
+    skinnedMesh.skeleton.bones.forEach((bone) => {
+      let track = recordedTracks.current.get(bone.name);
 
-  function bakeAnimation(skinnedMesh: THREE.SkinnedMesh, history: any[], fps: number) {
-    const skeleton = skinnedMesh.skeleton;
+      if (!track) {
+        track = { times: [], positions: [], rotations: [] };
+        recordedTracks.current.set(bone.name, track);
+      }
+
+      track.times.push(time);
+
+      track.positions.push(
+        bone.position.x,
+        bone.position.y,
+        bone.position.z
+      );
+
+      track.rotations.push(
+        bone.quaternion.x,
+        bone.quaternion.y,
+        bone.quaternion.z,
+        bone.quaternion.w
+      );
+    });
+  }
+
+  function buildAnimationClip(): THREE.AnimationClip {
     const tracks: THREE.KeyframeTrack[] = [];
 
-    // Prepare empty arrays for each bone
-    const timesPerBone: number[][] = skeleton.bones.map(() => []);
-    const valuesPerBone: number[][] = skeleton.bones.map(() => []);
-
-
-    history.forEach((frameData, frameIndex) => {
-      let pose = frameData.pose;
-
-      pose = pose.map((p: any) => ({
-        x: p.x,
-        y: -p.y,
-        z: -p.z
-      }));
-
-      // Apply the pose to skeleton
-      applyPoseToActor(pose);
-      actorPostProcess();
-
-      skeleton.bones.forEach((bone, i) => {
-        timesPerBone[i].push(frameIndex / fps);
-        valuesPerBone[i].push(bone.quaternion.x, bone.quaternion.y, bone.quaternion.z, bone.quaternion.w);
-      });
-    });
-
-    skeleton.bones.forEach((bone, i) => {
+    recordedTracks.current.forEach((data, boneName) => {
       tracks.push(
-        new QuaternionKeyframeTrack(
-          `${bone.name}.quaternion`,
-          timesPerBone[i],
-          valuesPerBone[i]
+        new THREE.VectorKeyframeTrack(
+          `${boneName}.position`,
+          data.times,
+          data.positions,
+          THREE.InterpolateLinear
+        )
+      );
+
+      tracks.push(
+        new THREE.QuaternionKeyframeTrack(
+          `${boneName}.quaternion`,
+          data.times,
+          data.rotations,
+          THREE.InterpolateLinear
         )
       );
     });
 
-    return new AnimationClip('ActorAnimation', history.length / fps, tracks);
+    return new THREE.AnimationClip("Animation", -1, tracks);
   }
 
-
   function handleSave() {
-    console.log("Saving GLTF...");
-    const skinnedMesh = actor.getObjectByProperty('type', 'SkinnedMesh') as THREE.SkinnedMesh;
-    if (!skinnedMesh) return;
-
-    const clip = bakeAnimation(skinnedMesh, history, fps);
-    if (!clip) return;
-
     const exporter = new GLTFExporter();
+    const clip = buildAnimationClip();
+
     exporter.parse(
       actor,
       (result) => {
-        const blob = new Blob([JSON.stringify(result)], { type: 'application/json' });
+        const blob = new Blob([result as ArrayBuffer], { type: 'model/gltf-binary', });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -406,7 +339,7 @@ const Scene = forwardRef(function Scene({ isPlaying, fps, duration, setFrame, cu
         URL.revokeObjectURL(url);
       },
       () => { },
-      { binary: false, animations: [clip] }
+      { binary: true, animations: [clip] }
     );
   }
 
@@ -420,9 +353,12 @@ const Scene = forwardRef(function Scene({ isPlaying, fps, duration, setFrame, cu
       <directionalLight position={[3, 3, 3]} intensity={1} />
 
       {/* Live Pose Skeleton */}
-      {livePose?.length > 0 && <PoseDebug pose={processedPose} color="aqua" />}
-
-      {calibrationPose?.length > 0 && <PoseDebug pose={processedCalibrationPose} color="red" />}
+      {(showDebug && !hasRecorded) && (
+        <>
+          {pose?.length > 0 && <PoseDebug pose={normalizedPose} color="aqua" />}
+          {calibrationPose?.length > 0 && <PoseDebug pose={normalizedCalibrationPose} color="red" />}
+        </>
+      )}
 
       <primitive object={gltf.scene} />
 
@@ -435,6 +371,58 @@ const Scene = forwardRef(function Scene({ isPlaying, fps, duration, setFrame, cu
     </>
   );
 });
+
+///                       ///
+///       MAPPINGS        ///
+///                       ///
+
+type BonePoseMap = {
+  [boneName: string]: { fromIndex: number; toIndex: number };
+};
+
+const bonePoseMap: BonePoseMap = {
+  L_hand_JNT: { fromIndex: 15, toIndex: 17 },
+  R_hand_JNT: { fromIndex: 16, toIndex: 18 },
+  R_forearm_JNT: { fromIndex: 14, toIndex: 16 },
+  L_forearm_JNT: { fromIndex: 13, toIndex: 15 },
+  R_arm_JNT: { fromIndex: 12, toIndex: 14 },
+  L_arm_JNT: { fromIndex: 11, toIndex: 13 },
+  L_thigh_JNT: { fromIndex: 23, toIndex: 25 },
+  R_thigh_JNT: { fromIndex: 24, toIndex: 26 },
+  L_knee_JNT: { fromIndex: 25, toIndex: 27 },
+  R_knee_JNT: { fromIndex: 26, toIndex: 28 },
+  L_foot_JNT: { fromIndex: 29, toIndex: 27 },
+  R_foot_JNt: { fromIndex: 30, toIndex: 28 },
+};
+
+///                             ///
+///       EXTRA FUNCTIONS       ///
+///                             ///
+
+function normalizePose(pose) {
+  if (!pose) return null;
+  return pose.map((p: any) => ({
+    x: p.x,
+    y: -p.y,
+    z: -p.z
+  }));
+}
+
+function averagePoints(a, b) {
+  return {
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+    z: (a.z + b.z) / 2
+  };
+}
+
+function distance(a, b) {
+  return Math.sqrt(
+    (a.x - b.x) * (a.x - b.x) +
+    (a.y - b.y) * (a.y - b.y) +
+    (a.z - b.z) * (a.z - b.z)
+  );
+}
 
 function Grid() {
   const material = useRef<THREE.ShaderMaterial>(null);

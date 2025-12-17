@@ -1,13 +1,13 @@
 import './App.css';
 import AppBar from './components/AppBar';
-import MotionCaptureLive from './components/MotionCaptureLive/MotionCaptureLive';
+import MainWindow from './components/MainWindow';
 
 function App() {
   return (
     <div id="app">
       <AppBar/>
       <div id="main">
-        <MotionCaptureLive/>
+        <MainWindow/>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-html, body, #root, #app {
+ #root, #app {
   height: 100%;
   width: 100%;
   margin: 0;
@@ -14,84 +14,5 @@ html, body, #root, #app {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* critical for flex children with overflow */
-}
-
-#home-view {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  min-height: 0; /* important */
-}
-
-#overlay {
-  margin: 1em;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  position: absolute;
-  gap: 2px;
-  right: 0;
-  z-index: 100;
-}
-
-#context-selector {
-  background-color: #131313;
-  border-radius: 16px;
-  max-width: 90%;
-  height: fit-content;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-#context-selector #header {
-  margin: 0.5em;
-  display: flex;
-  justify-content: right;
-  align-items: center;
-  width: calc(100% - 1em);
-}
-
-#context-options {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1em;
-  margin: 2em;
-  margin-top: 1em;
-}
-
-.contextButton {
-  background-color: transparent;
-  color: white;
-  transition: border ease 0.25s, color ease 0.2s;
-  display: flex;              /* use flexbox */
-  flex-direction: column;
-  align-items: center;        /* vertical centering */
-  justify-content: center;    /* horizontal centering */
-  height: 3em;               /* button height */
-  width: 3em;
-  border: solid #333 1px;
-  border-radius: 16px;         /* optional rounded corners */
-  font-size: 64px;            /* icon size */
-}
-
-.contextButton:hover {
-    color: var(--primary);
-    cursor: pointer;
-    border-color: var(--primary);
-}
-
-.contextButton .label {
-  font-size: 18px;
-}
-
-.contextButton .description {
-  font-size: 12px;
+  min-height: 0;
 }

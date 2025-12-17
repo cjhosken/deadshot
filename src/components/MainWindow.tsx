@@ -1,33 +1,94 @@
 import { useEffect, useRef, useState } from 'react';
-import './MotionCaptureLive.css';
-import Viewport from '../Viewport/Viewport';
+import './MainWindow.css';
+import Viewport from './Viewport';
 import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 
+export default function MainWindow() {
+    const [phase, setPhase] = useState<'tpose' | 'demo' | 'countdown' | 'recording' | 'review'>('demo');
+    const [showDebug, setShowDebug] = useState<boolean>(true);
 
-export default function MotionCaptureLive() {
+    // --- Camera Setup --- // 
+    const [noCamera, setNoCamera] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
     const streamRef = useRef<MediaStream | null>(null);
+
+    async function fetchDevices() {
+        try {
+            await navigator.mediaDevices.getUserMedia({ video: true });
+            const deviceInfos = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = deviceInfos.filter(d => d.kind === 'videoinput');
+            setDevices(videoDevices);
+            if (videoDevices.length > 0) {
+                setSelectedDeviceId(videoDevices[0].deviceId);
+                setNoCamera(false);
+            } else {
+                setNoCamera(true);
+            }
+        } catch (err) {
+            console.error('Error accessing camera', err);
+            setNoCamera(true);
+
+        }
+    }
+
+    async function startCamera() {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { deviceId: { exact: selectedDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24 }, autoGainControl: true }
+            });
+
+            if (!stream || stream.getVideoTracks().length === 0) {
+                setNoCamera(true);
+                return;
+            }
+
+            streamRef.current = stream;
+            if (videoRef.current) videoRef.current.srcObject = stream;
+            setNoCamera(false);
+        } catch (err: any) {
+            console.error('Error accessing camera', err);
+            setNoCamera(true);
+        }
+    }
+
+    useEffect(() => {
+        fetchDevices();
+    }, []);
+
+    useEffect(() => {
+        if (!selectedDeviceId || noCamera) return;
+
+        startCamera();
+
+        return () => {
+            if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        };
+    }, [selectedDeviceId]);
+
+    useEffect(() => {
+        if (videoRef.current && streamRef.current) {
+            videoRef.current.srcObject = streamRef.current;
+        }
+    }, [phase]);
+
+    // --- Recording --- //
+
     const [isRecording, setIsRecording] = useState(false);
     const isRecordingRef = useRef(isRecording);
-    useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
-    const [showCountdown, setShowCountdown] = useState(false);
-    const [countdown, setCountdown] = useState(5);
     const [recorded, setRecorded] = useState(false);
-    const frameIntervalRef = useRef<number | null>(null);
+
+    useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
+
+    // --- Setup BlazePose --- //
     const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(null);
-    const [poseData, setPoseData] = useState<any | null>(null);
-    const [poseHistory, setPoseHistory] = useState<any[]>([]);
-    const [phase, setPhase] = useState<'tpose' | 'demo' | 'countdown' | 'recording' | 'review'>('demo');
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [calibrationCountdown, setCalibrationCountdown] = useState<number | null>(null);
-    const [calibrationPose, setCalibrationPose] = useState<any | null>(null);
 
-    const [noCamera, setNoCamera] = useState(false); // NEW: tracks if a camera is available
-
-
-    // --- Setup BlazePose ---
     useEffect(() => {
         async function initPose() {
             const vision = await FilesetResolver.forVisionTasks(
@@ -45,6 +106,77 @@ export default function MotionCaptureLive() {
         }
         initPose();
     }, []);
+
+    // --- Calibration --- //
+    const [calibrationCountdown, setCalibrationCountdown] = useState<number | null>(null);
+    const [calibrationPose, setCalibrationPose] = useState<any | null>(null);
+
+    const startCalibration = () => {
+        setCalibrationCountdown(5);
+
+        let counter = 5;
+        const interval = setInterval(() => {
+            counter -= 1;
+            setCalibrationCountdown(counter);
+
+            if (counter <= 0) {
+                clearInterval(interval);
+                setCalibrationCountdown(null);
+                finishCalibration();
+            }
+        }, 1000);
+    };
+
+    const finishCalibration = () => {
+        if (poseData && poseData.length) {
+            setCalibrationPose(poseData);
+            console.log("Calibration pose set:", poseData);
+        } else {
+            console.warn("No valid pose data for calibration yet");
+        }
+        setCalibrationCountdown(null);
+        setPhase("demo");
+    };
+
+    // --- Pose detection --- //
+    const [poseData, setPoseData] = useState<any | null>(null);
+
+    useEffect(() => {
+        if (!poseLandmarker || !videoRef.current) return;
+        let running = true;
+        let lastTime = performance.now();
+        const frameInterval = 1000 / 24;
+
+        const detectPose = async (now: number) => {
+            if (!running) return;
+
+            const elapsed = now - lastTime;
+            if (elapsed >= frameInterval) {
+                lastTime = now;
+
+                if (
+                    videoRef.current &&
+                    poseLandmarker &&
+                    videoRef.current.videoWidth > 0 &&
+                    videoRef.current.videoHeight > 0 &&
+                    !recorded // stop detection when timeline playback
+                ) {
+                    const results = poseLandmarker.detectForVideo(videoRef.current, now);
+                    if (results.landmarks?.[0]) {
+                        setPoseData(results.landmarks[0]);
+                    }
+                }
+            }
+
+            requestAnimationFrame(detectPose);
+        };
+
+        requestAnimationFrame(detectPose);
+        return () => { running = false; };
+    }, [poseLandmarker, recorded, calibrationPose]);
+
+    // --- Draw Points --- //
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -93,58 +225,15 @@ export default function MotionCaptureLive() {
         drawLine(12, 24); // right side
     }, [poseData]);
 
-    useEffect(() => {
-        if (videoRef.current && streamRef.current) {
-            videoRef.current.srcObject = streamRef.current;
-        }
-    }, [phase]);
 
-    // --- Pose detection ---
-    useEffect(() => {
-        if (!poseLandmarker || !videoRef.current) return;
-        let running = true;
-        let lastTime = performance.now();
-        const frameInterval = 1000 / 24;
-
-        const detectPose = async (now: number) => {
-            if (!running) return;
-
-            const elapsed = now - lastTime;
-            if (elapsed >= frameInterval) {
-                lastTime = now;
-
-                if (
-                    videoRef.current &&
-                    poseLandmarker &&
-                    videoRef.current.videoWidth > 0 &&
-                    videoRef.current.videoHeight > 0 &&
-                    !recorded // stop detection when timeline playback
-                ) {
-                    const results = poseLandmarker.detectForVideo(videoRef.current, now);
-                    if (results.landmarks?.[0]) {
-                        setPoseData(results.landmarks[0]);
-
-                        if (isRecordingRef.current) {
-                            setPoseHistory(prev => [
-                                ...prev,
-                                { pose: results.landmarks[0], timestamp: performance.now() }
-                            ]);
-                        }
-                    }
-                }
-            }
-
-            requestAnimationFrame(detectPose);
-        };
-
-        requestAnimationFrame(detectPose);
-        return () => { running = false; };
-    }, [poseLandmarker, recorded, calibrationPose]);
+    // --- Handlers --- //
+    const [showCountdown, setShowCountdown] = useState(false);
+    const [countdown, setCountdown] = useState(5);
+    const frameIntervalRef = useRef<number | null>(null);
 
     const handleRecord = () => {
         setShowCountdown(true);
         setCountdown(5);
-        setPoseHistory([]);
         setRecorded(false);
 
         let counter = 5;
@@ -162,7 +251,6 @@ export default function MotionCaptureLive() {
 
     const handleStop = () => {
         setIsRecording(false);
-        if (poseData) setPoseHistory(prev => [...prev, { pose: poseData, timestamp: performance.now() }]);
         if (frameIntervalRef.current) {
             clearInterval(frameIntervalRef.current);
             frameIntervalRef.current = null;
@@ -171,98 +259,10 @@ export default function MotionCaptureLive() {
         setPhase("review");
     };
 
-    const startCalibration = () => {
-        setCalibrationCountdown(5);
-
-        let counter = 5;
-        const interval = setInterval(() => {
-            counter -= 1;
-            setCalibrationCountdown(counter);
-
-            if (counter <= 0) {
-                clearInterval(interval);
-                setCalibrationCountdown(null);
-                finishCalibration();
-            }
-        }, 1000);
-    };
-
-    const finishCalibration = () => {
-        if (poseData && poseData.length) {
-            setCalibrationPose(poseData);
-            console.log("Calibration pose set:", poseData);
-        } else {
-            console.warn("No valid pose data for calibration yet");
-        }
-        setCalibrationCountdown(null);
+    const handleTrash = () => {
+        setRecorded(false);
         setPhase("demo");
     };
-
-    const handleTrash = () => {
-        console.log("Discarding recording...");
-        setRecorded(false);
-        setPoseHistory([]);
-        setPhase("demo"); // back to live preview
-    };
-
-    // --- Camera setup ---
-    useEffect(() => {
-        async function fetchDevices() {
-            try {
-                await navigator.mediaDevices.getUserMedia({ video: true });
-                const deviceInfos = await navigator.mediaDevices.enumerateDevices();
-                const videoDevices = deviceInfos.filter(d => d.kind === 'videoinput');
-                setDevices(videoDevices);
-                if (videoDevices.length > 0) {
-                    setSelectedDeviceId(videoDevices[0].deviceId);
-                    setNoCamera(false); // NEW: set noCamera to false if video devices found
-                } else {
-                    setNoCamera(true); // NEW: set noCamera to true if no video devices found
-                }
-            } catch (err) {
-                console.error('Error accessing camera', err);
-                setNoCamera(true); // NEW: set noCamera to true if no video devices found
-
-            }
-        }
-        fetchDevices();
-    }, []);
-
-    useEffect(() => {
-        if (!selectedDeviceId) return;
-
-        async function startCamera() {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-                streamRef.current = null;
-            }
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { deviceId: { exact: selectedDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24 }, autoGainControl: true }
-                });
-
-                if (!stream || stream.getVideoTracks().length === 0) {
-                    setNoCamera(true); // No video track available
-                    return;
-                }
-
-                streamRef.current = stream;
-                if (videoRef.current) videoRef.current.srcObject = stream;
-                setNoCamera(false);
-            } catch (err: any) {
-                console.error('Error accessing camera', err);
-                setNoCamera(true); // Treat all errors (NotAllowedError, NotFoundError, etc.) as no webcam
-            }
-        }
-
-        if (noCamera) return; // NEW: do not start camera if noCamera is true
-        startCamera();
-
-        return () => {
-            if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
-            streamRef.current = null;
-        };
-    }, [selectedDeviceId]);
 
     return (
         <div id="container" className={phase === 'recording' ? 'recording' : ''}>
@@ -313,7 +313,7 @@ export default function MotionCaptureLive() {
                 <div className="countdown-overlay"><span>{countdown}</span></div>
             )}
 
-            <Viewport recording={phase === "recording"} recorded={recorded} pose={poseData} calibrationPose={calibrationPose} history={poseHistory} onTrash={handleTrash} />
+            <Viewport isRecording={isRecording} hasRecorded={recorded} pose={poseData} calibrationPose={calibrationPose} onTrash={handleTrash} showDebug={showDebug} />
 
             <div id='recording-frame' className={isRecording ? "recording" : ""}></div>
 
@@ -321,6 +321,16 @@ export default function MotionCaptureLive() {
                 <button
                     onClick={() => setPhase("tpose")}
                 > Calibrate </button>
+                {phase !== "review" && (
+                    <label style={{ display: "flex", alignItems: "center", margin: "0.5rem", fontSize: "0.75em" }}>
+                        <input
+                            type="checkbox"
+                            checked={showDebug}
+                            onChange={(e) => setShowDebug(e.target.checked)}
+                        />
+                        Debug
+                    </label>
+                )}
             </div>
 
             {((phase === "recording" || phase === "demo") && !recorded) && (
