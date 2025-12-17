@@ -392,7 +392,7 @@ const bonePoseMap: BonePoseMap = {
   L_knee_JNT: { fromIndex: 25, toIndex: 27 },
   R_knee_JNT: { fromIndex: 26, toIndex: 28 },
   L_foot_JNT: { fromIndex: 29, toIndex: 27 },
-  R_foot_JNt: { fromIndex: 30, toIndex: 28 },
+  R_foot_JNT: { fromIndex: 30, toIndex: 28 },
 };
 
 ///                             ///
