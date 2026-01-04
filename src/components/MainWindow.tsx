@@ -10,6 +10,7 @@ export default function MainWindow() {
     // --- Camera Setup --- // 
     const [noCamera, setNoCamera] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
     const streamRef = useRef<MediaStream | null>(null);
 
@@ -19,6 +20,7 @@ export default function MainWindow() {
             const deviceInfos = await navigator.mediaDevices.enumerateDevices();
             const videoDevices = deviceInfos.filter(d => d.kind === 'videoinput');
             setDevices(videoDevices);
+            console.log(devices);
             if (videoDevices.length > 0) {
                 setSelectedDeviceId(videoDevices[0].deviceId);
                 setNoCamera(false);
@@ -141,7 +143,7 @@ export default function MainWindow() {
 
         requestAnimationFrame(detectPose);
         return () => { running = false; };
-    }, [poseLandmarker, recorded, calibrationPose]);
+    }, [poseLandmarker, recorded]);
 
     // --- Draw Points --- //
     const canvasRef = useRef<HTMLCanvasElement>(null);
