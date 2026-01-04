@@ -10,7 +10,6 @@ export default function MainWindow() {
     // --- Camera Setup --- // 
     const [noCamera, setNoCamera] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
-    const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
     const streamRef = useRef<MediaStream | null>(null);
 
@@ -106,37 +105,6 @@ export default function MainWindow() {
         }
         initPose();
     }, []);
-
-    // --- Calibration --- //
-    const [calibrationCountdown, setCalibrationCountdown] = useState<number | null>(null);
-    const [calibrationPose, setCalibrationPose] = useState<any | null>(null);
-
-    const startCalibration = () => {
-        setCalibrationCountdown(5);
-
-        let counter = 5;
-        const interval = setInterval(() => {
-            counter -= 1;
-            setCalibrationCountdown(counter);
-
-            if (counter <= 0) {
-                clearInterval(interval);
-                setCalibrationCountdown(null);
-                finishCalibration();
-            }
-        }, 1000);
-    };
-
-    const finishCalibration = () => {
-        if (poseData && poseData.length) {
-            setCalibrationPose(poseData);
-            console.log("Calibration pose set:", poseData);
-        } else {
-            console.warn("No valid pose data for calibration yet");
-        }
-        setCalibrationCountdown(null);
-        setPhase("demo");
-    };
 
     // --- Pose detection --- //
     const [poseData, setPoseData] = useState<any | null>(null);
