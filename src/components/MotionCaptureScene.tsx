@@ -5,18 +5,56 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/Addons.js";
 import { GLTFExporter } from "three/examples/jsm/Addons.js";
 
+const BONE_FORWARD_AXIS = new THREE.Vector3(0, 1, 0); // common for glTF
+
+const BLAZE_TO_RIG = {  
+  // Arms
+  L_upperArm: { bone: "L_arm_JNT", parent: 11, child: 13 },
+  L_forearm: { bone: "L_forearm_JNT", parent: 13, child: 15 },
+
+  R_upperArm: { bone: "R_arm_JNT", parent: 12, child: 14 },
+  R_forearm: { bone: "R_forearm_JNT", parent: 14, child: 16 },
+
+  // Legs
+  L_thigh: { bone: "L_thigh_JNT", parent: 23, child: 25 },
+  L_knee: { bone: "L_knee_JNT", parent: 25, child: 27 },
+  L_foot: {bone: "L_foot_JNT", parent: 27, child: 31},
+
+  R_thigh: { bone: "R_thigh_JNT", parent: 24, child: 26 },
+  R_knee: { bone: "R_knee_JNT", parent: 26, child: 28 },
+  R_foot: {bone: "R_foot_JNT", parent: 28, child: 32}
+};
+
+const FORWARD_AXES = {
+  L_arm_JNT: new THREE.Vector3(0, 1, 0),
+  L_forearm_JNT: new THREE.Vector3(0, 1, 0),
+
+  R_arm_JNT: new THREE.Vector3(0, 1, 0),
+  R_forearm_JNT: new THREE.Vector3(0, 1, 0),
+
+  L_thigh_JNT: new THREE.Vector3(0, 1, 0),
+  L_knee_JNT: new THREE.Vector3(0, 1, 0),
+  L_foot_JNT: new THREE.Vector3(0, 1, 0),
+
+  R_thigh_JNT: new THREE.Vector3(0, 1, 0),
+  R_knee_JNT: new THREE.Vector3(0, 1, 0),
+  R_foot_JNT: new THREE.Vector3(0, 1, 0),
+  C_head_JNT: new THREE.Vector3(0, 0, 1),
+};
+
+
+
 interface SceneProps {
   isRecording: boolean;
   hasRecorded: boolean;
   fps: number;
   playbackFrame: number;
   pose?: any;
-  calibrationPose?: any;
   showDebug: boolean;
   durationCallback: (value: number) => void;
 }
 
-export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRecorded, fps, durationCallback, playbackFrame, pose, calibrationPose, showDebug }: SceneProps, ref) {
+export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRecorded, fps, durationCallback, playbackFrame, pose, showDebug }: SceneProps, ref) {
   const gltf = useLoader(GLTFLoader, 'assets/actor.glb');
   const actor = gltf.scene;
 
@@ -33,9 +71,11 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
     rotations: number[];
   };
 
+  const smoothedPoseRef = useRef<any[] | null>(null);
+  const prevPoseRef = useRef<any[] | null>(null);
+
   const recordedTracks = useRef<Map<string, BoneTrackData>>(new Map());
 
-  const normalizedCalibrationPose = useMemo(() => { return normalizePose(calibrationPose) }, [calibrationPose]);
   const normalizedPose = useMemo(() => { return normalizePose(pose) }, [pose]);
 
   useEffect(() => {
@@ -83,111 +123,95 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
     if (hasRecorded) return;
 
     if (normalizedPose) {
-      applyPoseToActor(normalizedPose);
+      const smooth = smoothPoseAdaptiveConfidence(normalizedPose);
+      applyPoseToActor(smooth);
+      applyPoseToSkeleton(smooth);
       actorPostProcess();
     }
   }, [normalizedPose]);
 
   function applyPoseToActor(pose: any[]) {
     if (!actor || !pose) return;
-    const skinnedMesh = actor.getObjectByProperty('type', 'SkinnedMesh') as THREE.SkinnedMesh;
+
+    const skinnedMesh = actor.getObjectByProperty(
+      "type",
+      "SkinnedMesh"
+    ) as THREE.SkinnedMesh;
+
     if (!skinnedMesh) return;
 
     const skeleton = skinnedMesh.skeleton;
-    const tmpV1 = new THREE.Vector3();
-    const tmpV2 = new THREE.Vector3();
-    const tmpQuat = new THREE.Quaternion();
+    const hips = skeleton.getBoneByName("C_hips_JNT");
+    if (!hips) return;
 
-    // helper: compute world-space forward for a bone:
-    function computeBoneWorldForward(bone: THREE.Bone): THREE.Vector3 {
-      // prefer vector from bone -> first child (common rig convention)
-      if (bone.children && bone.children.length > 0) {
-        bone.getWorldPosition(tmpV1);
-        bone.children[0].getWorldPosition(tmpV2);
-        const v = tmpV2.sub(tmpV1);
-        if (v.lengthSq() > 1e-8) return v.normalize();
-      }
-      // fallback: use bone's -Z world direction (Object3D.getWorldDirection returns -Z)
-      const dir = new THREE.Vector3();
-      bone.getWorldDirection(dir); // returns direction of -Z axis in world space
-      dir.negate(); // now it's +Z
-      if (dir.lengthSq() > 1e-8) return dir.normalize();
-      // ultimate fallback
-      return new THREE.Vector3(0, 1, 0);
-    }
+    // --- ROTATION ---
+    const frame = computeTorsoFrame(pose);
+    const worldQuat = torsoFrameToQuaternion(frame);
 
-    // helper: map pose points -> world-space Vector3
-    // NOTE: YOU MUST ADJUST THIS mapping to match your pose data coordinate system.
-    function posePointToVector(p: any): THREE.Vector3 {
-      // Common mapping assumption: pose.x = right (X), pose.y = up (Y), pose.z = forward (Z)
-      // If your pose data uses a different ordering (e.g. y<->z swapped), change here.
-      return new THREE.Vector3(p.x, p.y, p.z);
-    }
+    // Convert world rotation → local bone rotation
+    const parent = hips.parent as THREE.Object3D;
+    const parentWorldQuat = new THREE.Quaternion();
+    parent.getWorldQuaternion(parentWorldQuat);
 
-    for (const boneName in bonePoseMap) {
-      const bone = skeleton.getBoneByName(boneName);
+    const localQuat = parentWorldQuat.clone().invert().multiply(worldQuat);
+    hips.quaternion.copy(localQuat);
+  }
+
+  function applyPoseToSkeleton(pose: any[]) {
+    const skinnedMesh = actor.getObjectByProperty(
+      "type",
+      "SkinnedMesh"
+    ) as THREE.SkinnedMesh;
+
+    if (!skinnedMesh) return;
+
+    const skeleton = skinnedMesh.skeleton;
+
+    for (const key in BLAZE_TO_RIG) {
+      const map = BLAZE_TO_RIG[key];
+      const bone = skeleton.getBoneByName(map.bone);
       if (!bone) continue;
 
-      const { fromIndex, toIndex } = bonePoseMap[boneName];
-      const fromP = pose[fromIndex];
-      const toP = pose[toIndex];
-      if (!fromP || !toP) continue;
+      const p0 = pose[map.parent];
+      const p1 = pose[map.child];
 
-      // build target direction in world space (from pose)
-      const fromV = posePointToVector(fromP);
-      const toV = posePointToVector(toP);
-      const targetDirWorld = new THREE.Vector3().subVectors(toV, fromV);
-      if (targetDirWorld.lengthSq() < 1e-8) continue;
-      targetDirWorld.normalize();
+      const dirWorld = new THREE.Vector3(
+        -(p1.x - p0.x),
+        p1.y - p0.y,
+        p1.z - p0.z
+      );
 
-      // compute current bone forward in world space
-      const boneForwardWorld = computeBoneWorldForward(bone); // already normalized
-
-      // convert BOTH world-space vectors into bone.parent's local space
-      // so setFromUnitVectors is applied in the same space that bone.quaternion is defined in.
-      const parent = bone.parent || skinnedMesh; // ensure there's a parent
-      const parentWorldQuat = new THREE.Quaternion();
-      parent.getWorldQuaternion(parentWorldQuat);
-      const parentWorldQuatInv = parentWorldQuat.clone().invert();
-
-      const boneForwardLocal = boneForwardWorld.clone().applyQuaternion(parentWorldQuatInv).normalize();
-      const targetDirLocal = targetDirWorld.clone().applyQuaternion(parentWorldQuatInv).normalize();
-
-
-
-      // now create quaternion that rotates boneForwardLocal -> targetDirLocal
-      tmpQuat.setFromUnitVectors(boneForwardLocal, targetDirLocal);
-
-      // slerp the bone's local quaternion toward the target
-      bone.quaternion.slerp(tmpQuat, 0.5);
+      alignBoneToVector(bone, dirWorld);
     }
 
-    // Example for hips and neck using same mapping + parent-space approach:
-    function applyBoneByPose(boneName: string, fromIdxA: number, fromIdxB: number, toIdxA: number, toIdxB: number, weight = 0.5) {
-      const bone = skeleton.getBoneByName(boneName);
-      if (!bone) return;
-      const from = averagePoints(pose[fromIdxA], pose[fromIdxB]);
-      const to = averagePoints(pose[toIdxA], pose[toIdxB]);
-      if (!from || !to) return;
-      const targetDirWorld = new THREE.Vector3(to.x - from.x, to.y - from.y, to.z - from.z).normalize();
-      const boneForwardWorld = computeBoneWorldForward(bone);
-
-      const parent = bone.parent || skinnedMesh;
-      const parentWorldQuat = new THREE.Quaternion();
-      parent.getWorldQuaternion(parentWorldQuat);
-      const parentWorldQuatInv = parentWorldQuat.clone().invert();
-
-      const boneForwardLocal = boneForwardWorld.clone().applyQuaternion(parentWorldQuatInv).normalize();
-      const targetDirLocal = targetDirWorld.clone().applyQuaternion(parentWorldQuatInv).normalize();
-
-      tmpQuat.setFromUnitVectors(boneForwardLocal, targetDirLocal);
-      bone.quaternion.slerp(tmpQuat, weight);
+    const head = skeleton.getBoneByName("C_head_JNT");
+    if (head) {
+      const { forward } = computeHeadForward(pose);
+      alignBoneToVector(head, forward);
     }
-
-    // hips in your original code used averages of some indices:
-    applyBoneByPose("C_hips_JNT", 23, 24, 11, 12, 0.8);
-    applyBoneByPose("C_neck_JNT", 11, 12, 0, 0, 0.8);
   }
+
+
+  function computeHeadForward(pose: any[]) {
+    const nose = new THREE.Vector3(pose[0].x, pose[0].y, pose[0].z);
+    const leftEye = new THREE.Vector3(pose[7].x, pose[7].y, pose[7].z);
+    const rightEye = new THREE.Vector3(pose[8].x, pose[8].y, pose[8].z);
+
+    // left → right
+    const right = rightEye.clone().sub(leftEye).normalize();
+
+    // eyes midpoint → nose
+    const eyesCenter = leftEye.clone().add(rightEye).multiplyScalar(0.5);
+    const forward = nose.clone().sub(eyesCenter).normalize();
+
+    // orthogonalize
+    const up = new THREE.Vector3().crossVectors(forward, right).normalize();
+    forward.crossVectors(right, up).normalize();
+
+    return { forward, up, right };
+  }
+
+
 
   function actorPostProcess() {
     if (!actor || !pose) return;
@@ -196,12 +220,6 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
 
     const skeleton = skinnedMesh.skeleton;
 
-    const hipBone = skeleton.getBoneByName("C_hips_JNT");
-
-    const hip = averagePoints(pose[23], pose[24]);
-
-    hipBone.position.setX(-(hip.x - 0.5) * 100);
-
     let lowestY = Infinity;
     const tmp = new THREE.Vector3();
 
@@ -209,13 +227,110 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
       bone.getWorldPosition(tmp);
       if (tmp.y < lowestY) lowestY = tmp.y;
     }
-
-    hipBone.translateZ(lowestY * 100);
-
-    const scale = 1 / distance(pose[12], pose[24]);
-
-    hipBone.position.setY(-scale * 50);
   }
+
+  function computeTorsoFrame(pose: any[]) {
+    const LH = new THREE.Vector3(pose[23].x, pose[23].y, pose[23].z);
+    const RH = new THREE.Vector3(pose[24].x, pose[24].y, pose[24].z);
+    const LS = new THREE.Vector3(pose[11].x, pose[11].y, pose[11].z);
+    const RS = new THREE.Vector3(pose[12].x, pose[12].y, pose[12].z);
+
+    const hipsCenter = LH.clone().add(RH).multiplyScalar(0.5);
+    const shouldersCenter = LS.clone().add(RS).multiplyScalar(0.5);
+
+    const right = RH.clone().sub(LH).normalize();              // left → right
+    const up = shouldersCenter.clone().sub(hipsCenter).normalize(); // hips → shoulders
+    const forward = new THREE.Vector3().crossVectors(right, up).normalize();
+
+    // Re-orthogonalize to avoid drift
+    right.crossVectors(up, forward).normalize();
+
+    return { hipsCenter, right, up, forward };
+  }
+
+
+  function torsoFrameToQuaternion(frame: {
+    right: THREE.Vector3;
+    up: THREE.Vector3;
+    forward: THREE.Vector3;
+  }) {
+    const m = new THREE.Matrix4();
+    m.makeBasis(frame.right, frame.up, frame.forward);
+    return new THREE.Quaternion().setFromRotationMatrix(m);
+  }
+
+  function alignBoneToVector(
+    bone: THREE.Bone,
+    targetDirWorld: THREE.Vector3,
+    forwardAxis = BONE_FORWARD_AXIS
+  ) {
+
+    forwardAxis = FORWARD_AXES[bone.name] ?? BONE_FORWARD_AXIS;
+
+    // convert target direction to bone local space
+    const parentQuat = new THREE.Quaternion();
+    bone.parent!.getWorldQuaternion(parentQuat);
+
+    const targetLocal = targetDirWorld
+      .clone()
+      .normalize()
+      .applyQuaternion(parentQuat.clone().invert());
+
+    const quat = new THREE.Quaternion().setFromUnitVectors(
+      forwardAxis,
+      targetLocal
+    );
+
+    bone.quaternion.copy(quat);
+  }
+
+function smoothPoseAdaptiveConfidence(
+  current: any[],
+  velocityThreshold = 0.03,
+  alphaSlow = 0.3,
+  alphaFast = 0.8
+) {
+  if (!smoothedPoseRef.current || !prevPoseRef.current) {
+    smoothedPoseRef.current = current.map(p => ({ ...p }));
+    prevPoseRef.current = current.map(p => ({ ...p }));
+    return smoothedPoseRef.current;
+  }
+
+  const smooth = smoothedPoseRef.current;
+  const prev = prevPoseRef.current;
+
+  for (let i = 0; i < current.length; i++) {
+    const p = current[i];
+
+    const dx = p.x - prev[i].x;
+    const dy = p.y - prev[i].y;
+    const dz = p.z - prev[i].z;
+    const speed = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    console.log(p)
+
+    const confidence = p.c;
+
+    // velocity-based alpha
+    let alpha =
+      speed < velocityThreshold ? alphaSlow : alphaFast;
+
+    // confidence modulation
+    alpha *= THREE.MathUtils.clamp(confidence, 0.2, 1.0);
+
+    smooth[i].x += alpha * (p.x - smooth[i].x);
+    smooth[i].y += alpha * (p.y - smooth[i].y);
+    smooth[i].z += alpha * (p.z - smooth[i].z);
+
+    prev[i].x = p.x;
+    prev[i].y = p.y;
+    prev[i].z = p.z;
+    prev[i].visibility = p.visibility;
+
+  }
+
+  return smooth;
+}
+
 
   // --- PoseDebug component for rendering joints + bones ---
   const PoseDebug = ({ pose, color = "lime" }: { pose: any[]; color?: string }) => {
@@ -356,7 +471,6 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
       {(showDebug && !hasRecorded) && (
         <>
           {pose?.length > 0 && <PoseDebug pose={normalizedPose} color="aqua" />}
-          {calibrationPose?.length > 0 && <PoseDebug pose={normalizedCalibrationPose} color="red" />}
         </>
       )}
 
@@ -372,29 +486,6 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
   );
 });
 
-///                       ///
-///       MAPPINGS        ///
-///                       ///
-
-type BonePoseMap = {
-  [boneName: string]: { fromIndex: number; toIndex: number };
-};
-
-const bonePoseMap: BonePoseMap = {
-  L_hand_JNT: { fromIndex: 15, toIndex: 17 },
-  R_hand_JNT: { fromIndex: 16, toIndex: 18 },
-  R_forearm_JNT: { fromIndex: 14, toIndex: 16 },
-  L_forearm_JNT: { fromIndex: 13, toIndex: 15 },
-  R_arm_JNT: { fromIndex: 12, toIndex: 14 },
-  L_arm_JNT: { fromIndex: 11, toIndex: 13 },
-  L_thigh_JNT: { fromIndex: 23, toIndex: 25 },
-  R_thigh_JNT: { fromIndex: 24, toIndex: 26 },
-  L_knee_JNT: { fromIndex: 25, toIndex: 27 },
-  R_knee_JNT: { fromIndex: 26, toIndex: 28 },
-  L_foot_JNT: { fromIndex: 29, toIndex: 27 },
-  R_foot_JNT: { fromIndex: 30, toIndex: 28 },
-};
-
 ///                             ///
 ///       EXTRA FUNCTIONS       ///
 ///                             ///
@@ -402,26 +493,11 @@ const bonePoseMap: BonePoseMap = {
 function normalizePose(pose) {
   if (!pose) return null;
   return pose.map((p: any) => ({
-    x: p.x,
+    x: -p.x,
     y: -p.y,
-    z: -p.z
+    z:-p.z,
+    c: p.visibility
   }));
-}
-
-function averagePoints(a, b) {
-  return {
-    x: (a.x + b.x) / 2,
-    y: (a.y + b.y) / 2,
-    z: (a.z + b.z) / 2
-  };
-}
-
-function distance(a, b) {
-  return Math.sqrt(
-    (a.x - b.x) * (a.x - b.x) +
-    (a.y - b.y) * (a.y - b.y) +
-    (a.z - b.z) * (a.z - b.z)
-  );
 }
 
 function Grid() {

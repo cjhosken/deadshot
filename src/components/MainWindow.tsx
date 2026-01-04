@@ -275,52 +275,15 @@ export default function MainWindow() {
                 </div>
             )}
 
-            {phase === "tpose" && (
-                <div className="tpose-phase">
-                    <div className="tpose-container">
-                        <div id="camera-overlay">
-                            <video ref={videoRef} autoPlay playsInline />
-                            <canvas ref={canvasRef}></canvas>
-                            {calibrationCountdown} && (
-                            <div id="calibration-countdown">{calibrationCountdown}</div>
-                            )
-                        </div>
-                        <div className='camera-controls'>
-                            <select
-                                value={selectedDeviceId}
-                                onChange={(e) => setSelectedDeviceId(e.target.value)}
-                            >
-                                {devices.map((device) => (
-                                    <option key={device.deviceId} value={device.deviceId}>
-                                        {device.label || `Camera ${device.deviceId}`}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="tpose-overlay">
-                            <h2>Stand in a T-pose</h2>
-                            <p>Please keep within the frame until calibration completes.</p>
-                            <div id="tpose-buttons">
-                                <button onClick={() => startCalibration()}> Calibrate </button>
-                                <button onClick={() => setPhase("demo")}> Cancel </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {phase === "countdown" && (
                 <div className="countdown-overlay"><span>{countdown}</span></div>
             )}
 
-            <Viewport isRecording={isRecording} hasRecorded={recorded} pose={poseData} calibrationPose={calibrationPose} onTrash={handleTrash} showDebug={showDebug} />
+            <Viewport isRecording={isRecording} hasRecorded={recorded} pose={poseData} onTrash={handleTrash} showDebug={showDebug} />
 
             <div id='recording-frame' className={isRecording ? "recording" : ""}></div>
 
             <div className='calibrate-overlay'>
-                <button
-                    onClick={() => setPhase("tpose")}
-                > Calibrate </button>
                 {phase !== "review" && (
                     <label style={{ display: "flex", alignItems: "center", margin: "0.5rem", fontSize: "0.75em" }}>
                         <input

@@ -8,12 +8,11 @@ interface ViewportProps {
   hasRecorded?: boolean;
   isRecording?: boolean;
   pose?: any;
-  calibrationPose?: any;
   onTrash: () => void;
   showDebug: boolean;
 }
 
-export default function Viewport({ isRecording, hasRecorded, pose, calibrationPose, onTrash, showDebug }: ViewportProps) {
+export default function Viewport({ isRecording, hasRecorded, pose, onTrash, showDebug }: ViewportProps) {
   const [frame, setFrame] = useState(0);
   const [fps] = useState(24);
   const sceneRef = useRef<any>(null);
@@ -42,7 +41,6 @@ export default function Viewport({ isRecording, hasRecorded, pose, calibrationPo
           durationCallback={setDuration}
           playbackFrame={frame}
           pose={pose}
-          calibrationPose={calibrationPose}
           showDebug={showDebug}
         />
       </Canvas>

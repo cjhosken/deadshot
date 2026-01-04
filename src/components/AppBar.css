@@ -10,9 +10,12 @@
 }
 
 #logo {
-    margin: 0.5em;
-    width: 48px;
-    height: 48px;
+    justify-self: center;
+    align-self: center;
+    margin: 5px;
+    margin-top: 10px;
+    width: 60px;
+    height: 60px;
     user-select: none;
 }
 

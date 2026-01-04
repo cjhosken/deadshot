@@ -2,8 +2,6 @@
   <img src="./public/logo.png" alt="Deadshot Logo" width="200"/>
 </p>
 
-<h1 align="center">🎯 Deadshot</h1>
-
 <div align="center">
 
   <img src="https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=fff"/>
@@ -34,6 +32,13 @@
 - 🧩 **Open Source** — 100% free to use, modify, and extend.  
 
 ---
+
+## ToDo List
+*Current active tasks in deadshot*
+
+- ⭕ **Root bone transformation** — Global root movement based on webcam.
+
+- 🏔️ **Ground Adaptation** — Adaptive foot locking, jumping?
 
 ## Current Limitations
 *Deadshot is under active development and has the following known limitations:*
