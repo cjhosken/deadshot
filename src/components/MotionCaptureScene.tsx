@@ -42,12 +42,6 @@ const FORWARD_AXES = {
   C_head_JNT: new THREE.Vector3(0, 0, 1),
 };
 
-type RootState = {
-  position: THREE.Vector3;
-  velocity: THREE.Vector3;
-  grounded: boolean;
-};
-
 interface SceneProps {
   isRecording: boolean;
   hasRecorded: boolean;
