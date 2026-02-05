@@ -42,7 +42,11 @@ const FORWARD_AXES = {
   C_head_JNT: new THREE.Vector3(0, 0, 1),
 };
 
-
+type RootState = {
+  position: THREE.Vector3;
+  velocity: THREE.Vector3;
+  grounded: boolean;
+};
 
 interface SceneProps {
   isRecording: boolean;
@@ -115,8 +119,6 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
         mixer.current.update(0);
       }
     }
-
-
   });
 
   useEffect(() => {
@@ -191,14 +193,13 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
     }
   }
 
-
   function computeHeadForward(pose: any[]) {
     const nose = new THREE.Vector3(pose[0].x, pose[0].y, pose[0].z);
     const leftEye = new THREE.Vector3(pose[7].x, pose[7].y, pose[7].z);
     const rightEye = new THREE.Vector3(pose[8].x, pose[8].y, pose[8].z);
 
     // left → right
-    const right = rightEye.clone().sub(leftEye).normalize();
+    const right = rightEye.clone().sub(leftEye).normalize().multiply(new THREE.Vector3(1, 1, -1));
 
     // eyes midpoint → nose
     const eyesCenter = leftEye.clone().add(rightEye).multiplyScalar(0.5);
@@ -211,22 +212,38 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
     return { forward, up, right };
   }
 
-
-
   function actorPostProcess() {
     if (!actor || !pose) return;
     const skinnedMesh = actor.getObjectByProperty('type', 'SkinnedMesh') as THREE.SkinnedMesh;
     if (!skinnedMesh) return;
 
     const skeleton = skinnedMesh.skeleton;
+    const hips = skeleton.getBoneByName("C_hips_JNT");
 
     let lowestY = Infinity;
     const tmp = new THREE.Vector3();
 
-    for (const bone of skeleton.bones) {
+    skinnedMesh.skeleton.bones.forEach((bone) => {
       bone.getWorldPosition(tmp);
-      if (tmp.y < lowestY) lowestY = tmp.y;
-    }
+      lowestY = Math.min(lowestY, tmp.y);
+    });
+
+    const correctionWorldY = -lowestY;
+
+    // --- convert correction into hips parent space ---
+    const parent = hips.parent;
+    const parentWorldQuat = new THREE.Quaternion();
+    parent.getWorldQuaternion(parentWorldQuat);
+
+    const correctionLocal = new THREE.Vector3(0, correctionWorldY, 0)
+      .applyQuaternion(parentWorldQuat.clone().invert());
+
+    // --- APPLY AS SET, NOT ADD ---
+    hips.position.add(correctionLocal);
+
+    const hip = pose[0];
+    hips.position.x = 0.5-hip.x;
+    hips.position.y = 0.5-hip.y;
   }
 
   function computeTorsoFrame(pose: any[]) {
@@ -330,7 +347,6 @@ function smoothPoseAdaptiveConfidence(
 
   return smooth;
 }
-
 
   // --- PoseDebug component for rendering joints + bones ---
   const PoseDebug = ({ pose, color = "lime" }: { pose: any[]; color?: string }) => {
