@@ -7,7 +7,7 @@ import { GLTFExporter } from "three/examples/jsm/Addons.js";
 
 const BONE_FORWARD_AXIS = new THREE.Vector3(0, 1, 0); // common for glTF
 
-const BLAZE_TO_RIG = {  
+const BLAZE_TO_RIG = {
   // Arms
   L_upperArm: { bone: "L_arm_JNT", parent: 11, child: 13 },
   L_forearm: { bone: "L_forearm_JNT", parent: 13, child: 15 },
@@ -18,11 +18,11 @@ const BLAZE_TO_RIG = {
   // Legs
   L_thigh: { bone: "L_thigh_JNT", parent: 23, child: 25 },
   L_knee: { bone: "L_knee_JNT", parent: 25, child: 27 },
-  L_foot: {bone: "L_foot_JNT", parent: 27, child: 31},
+  L_foot: { bone: "L_foot_JNT", parent: 27, child: 31 },
 
   R_thigh: { bone: "R_thigh_JNT", parent: 24, child: 26 },
   R_knee: { bone: "R_knee_JNT", parent: 26, child: 28 },
-  R_foot: {bone: "R_foot_JNT", parent: 28, child: 32}
+  R_foot: { bone: "R_foot_JNT", parent: 28, child: 32 }
 };
 
 const FORWARD_AXES = {
@@ -51,6 +51,15 @@ interface SceneProps {
   showDebug: boolean;
   durationCallback: (value: number) => void;
 }
+
+type JointDebugSample = {
+  frame: number;
+  raw: { x: number; y: number; z: number; c: number; };
+  smooth: { x: number; y: number; z: number };
+};
+
+const debugJointData: JointDebugSample[] = [];
+const MAX_DEBUG_FRAMES = 2000; // prevent runaway growth
 
 export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRecorded, fps, durationCallback, playbackFrame, pose, showDebug }: SceneProps, ref) {
   const gltf = useLoader(GLTFLoader, 'assets/actor.glb');
@@ -118,8 +127,39 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
   useEffect(() => {
     if (hasRecorded) return;
 
+    let frameCounter = 0; // Remove this once done testing.
+
     if (normalizedPose) {
+      const rawJoint = normalizedPose[10];
+
       const smooth = smoothPoseAdaptiveConfidence(normalizedPose);
+
+      const smoothJoint = smooth[10];
+
+      console.log(smoothJoint);
+
+      // ---- DEBUG CAPTURE ----
+      debugJointData.push({
+        frame: frameCounter++,
+        raw: {
+          x: rawJoint.x,
+          y: rawJoint.y,
+          z: rawJoint.z,
+          c: rawJoint.c,
+        },
+        smooth: {
+          x: smoothJoint.x,
+          y: smoothJoint.y,
+          z: smoothJoint.z,
+        }
+      });
+
+      if (debugJointData.length > MAX_DEBUG_FRAMES) {
+        debugJointData.shift();
+      }
+
+      console.log(debugJointData);
+
       applyPoseToActor(smooth);
       applyPoseToSkeleton(smooth);
       actorPostProcess();
@@ -236,8 +276,8 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
     hips.position.add(correctionLocal);
 
     const hip = pose[0];
-    hips.position.x = 0.5-hip.x;
-    hips.position.y = 0.5-hip.y;
+    hips.position.x = 0.5 - hip.x;
+    hips.position.y = 0.5 - hip.y;
   }
 
   function computeTorsoFrame(pose: any[]) {
@@ -295,52 +335,52 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
     bone.quaternion.copy(quat);
   }
 
-function smoothPoseAdaptiveConfidence(
-  current: any[],
-  velocityThreshold = 0.03,
-  alphaSlow = 0.3,
-  alphaFast = 0.8
-) {
-  if (!smoothedPoseRef.current || !prevPoseRef.current) {
-    smoothedPoseRef.current = current.map(p => ({ ...p }));
-    prevPoseRef.current = current.map(p => ({ ...p }));
-    return smoothedPoseRef.current;
+  function smoothPoseAdaptiveConfidence(
+    current: any[],
+    velocityThreshold = 0.03,
+    alphaSlow = 0.3,
+    alphaFast = 0.8
+  ) {
+    if (!smoothedPoseRef.current || !prevPoseRef.current) {
+      smoothedPoseRef.current = current.map(p => ({ ...p }));
+      prevPoseRef.current = current.map(p => ({ ...p }));
+      return smoothedPoseRef.current;
+    }
+
+    const smooth = smoothedPoseRef.current;
+    const prev = prevPoseRef.current;
+
+    for (let i = 0; i < current.length; i++) {
+      const p = current[i];
+
+      const dx = p.x - prev[i].x;
+      const dy = p.y - prev[i].y;
+      const dz = p.z - prev[i].z;
+      const speed = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      console.log(p)
+
+      const confidence = p.c;
+
+      // velocity-based alpha
+      let alpha =
+        speed < velocityThreshold ? alphaSlow : alphaFast;
+
+      // confidence modulation
+      alpha *= THREE.MathUtils.clamp(confidence, 0.2, 1.0);
+
+      smooth[i].x += alpha * (p.x - smooth[i].x);
+      smooth[i].y += alpha * (p.y - smooth[i].y);
+      smooth[i].z += alpha * (p.z - smooth[i].z);
+
+      prev[i].x = p.x;
+      prev[i].y = p.y;
+      prev[i].z = p.z;
+      prev[i].visibility = p.visibility;
+
+    }
+
+    return smooth;
   }
-
-  const smooth = smoothedPoseRef.current;
-  const prev = prevPoseRef.current;
-
-  for (let i = 0; i < current.length; i++) {
-    const p = current[i];
-
-    const dx = p.x - prev[i].x;
-    const dy = p.y - prev[i].y;
-    const dz = p.z - prev[i].z;
-    const speed = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    console.log(p)
-
-    const confidence = p.c;
-
-    // velocity-based alpha
-    let alpha =
-      speed < velocityThreshold ? alphaSlow : alphaFast;
-
-    // confidence modulation
-    alpha *= THREE.MathUtils.clamp(confidence, 0.2, 1.0);
-
-    smooth[i].x += alpha * (p.x - smooth[i].x);
-    smooth[i].y += alpha * (p.y - smooth[i].y);
-    smooth[i].z += alpha * (p.z - smooth[i].z);
-
-    prev[i].x = p.x;
-    prev[i].y = p.y;
-    prev[i].z = p.z;
-    prev[i].visibility = p.visibility;
-
-  }
-
-  return smooth;
-}
 
   // --- PoseDebug component for rendering joints + bones ---
   const PoseDebug = ({ pose, color = "lime" }: { pose: any[]; color?: string }) => {
@@ -505,7 +545,7 @@ function normalizePose(pose) {
   return pose.map((p: any) => ({
     x: -p.x,
     y: -p.y,
-    z:-p.z,
+    z: -p.z,
     c: p.visibility
   }));
 }
