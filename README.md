@@ -33,13 +33,6 @@
 
 ---
 
-## ToDo List
-*Current active tasks in deadshot*
-
-- ⭕ **Root bone transformation** — Global root movement based on webcam.
-
-- 🏔️ **Ground Adaptation** — Adaptive foot locking, jumping?
-
 ## Current Limitations
 *Deadshot is under active development and has the following known limitations:*
 
