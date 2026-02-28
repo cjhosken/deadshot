@@ -41,7 +41,7 @@
 }
 
 #camera-overlay {
-  position: relative; /* important: create a positioning context */
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -50,16 +50,16 @@
   width: 60vh;
 }
 
-/* canvas directly on top of video */
+
 #camera-overlay canvas, #camera-overlay video, #camera-overlay img {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%); /* centers perfectly */
+  transform: translate(-50%, -50%);
   height: 50vh;
   width: 60vh;
   object-fit:cover;
-  pointer-events: none; /* lets clicks pass through */
+  pointer-events: none;
   border-radius: 16px;
 }
 
@@ -108,15 +108,10 @@
   background-color: var(--primary);
   transition: color ease 0.2s;
   display: flex;
-  /* use flexbox */
   align-items: center;
-  /* vertical centering */
   justify-content: center;
-  /* horizontal centering */
   height: 64px;
-  /* button height */
   width: 64px;
-  /* button width */
   bottom: 1rem;
   border: none;
   border-radius: 50%;
@@ -138,13 +133,13 @@
   left: 1em;
 }
 
-/* canvas directly on top of video */
+
 #camera-preview canvas, #camera-preview video {
   position: absolute;
   height: 25vh;
   width: 25vh;
   object-fit:cover;
-  pointer-events: none; /* lets clicks pass through */
+  pointer-events: none;
   border-radius: 16px;
 }
 
@@ -194,7 +189,7 @@
   justify-content: center;
   align-items: center;
   text-align: center;
-  z-index: 9999; /* ensure it's on top of other elements */
+  z-index: 9999;
 }
 
 .no-camera-popup div {

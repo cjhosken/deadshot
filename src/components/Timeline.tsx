@@ -11,6 +11,8 @@ interface TimelineProps {
   setFrame: Dispatch<SetStateAction<number>>;
 }
 
+// The timeline component appears at the bottom of the viewport when a recording is finished.
+
 export default function Timeline({
   frame,
   duration,
@@ -32,6 +34,7 @@ export default function Timeline({
     setFrame(0);
   }
 
+  // Handle playback using an interval. When the play button is toggled, start an interval that updates the frame based on the fps. Clear the interval when paused or when the component unmounts.
   useEffect(() => {
     if (!isPlaying) {
       if (intervalRef.current !== null) {
@@ -60,6 +63,7 @@ export default function Timeline({
     };
   }, [isPlaying, fps, duration, setFrame]);
 
+  // Handle scrubbing through the timeline. When the user clicks or drags on the scrollbar, calculate the corresponding frame based on the click position and update the frame state. Also pause playback while scrubbing.
   function setFrameFromClientX(clientX: number, target: HTMLDivElement) {
     const rect = target.getBoundingClientRect();
     const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
@@ -67,7 +71,7 @@ export default function Timeline({
     setFrame(Math.round(ratio * duration));
   }
 
-
+  // Handle mouse and touch events for scrubbing. On mouse down or touch start, pause playback and add event listeners for mouse move or touch move to update the frame as the user drags. Remove the event listeners on mouse up or touch end.
   function onMouseDown(e: React.MouseEvent<HTMLDivElement>) {
     setIsPlaying(false);
 
@@ -87,6 +91,7 @@ export default function Timeline({
     window.addEventListener("mouseup", onMouseUp);
   }
 
+  // Touch events for mobile scrubbing
   function onTouchStart(e: React.TouchEvent<HTMLDivElement>) {
     setIsPlaying(false);
 

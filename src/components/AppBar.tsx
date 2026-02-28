@@ -1,6 +1,9 @@
 import "./AppBar.css";
 import { FaBook, FaGithub } from "react-icons/fa";
 
+// The appbar appears at the top of the page. 
+// It contains a reload button (the logo), as well as links to documentation and source code.
+
 export default function AppBar() {
     return (
         <div id="app-bar">

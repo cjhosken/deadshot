@@ -14,6 +14,8 @@ export default function MainWindow() {
     const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
     const streamRef = useRef<MediaStream | null>(null);
 
+    // Fetch available video input devices and set the first one as the default. 
+    // If no devices are found or if there's an error accessing the camera, set the noCamera state to true to show a warning message.
     async function fetchDevices() {
         try {
             await navigator.mediaDevices.getUserMedia({ video: true });
@@ -34,6 +36,8 @@ export default function MainWindow() {
         }
     }
 
+    // Start the camera with the selected device ID. If a stream is already active, stop it before starting a new one. 
+    // Set the video element's srcObject to the new stream and handle any errors that occur during this process.
     async function startCamera() {
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
