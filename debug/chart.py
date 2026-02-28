@@ -19,8 +19,8 @@ fig, ax1 = plt.subplots(figsize=(10, 4))
 ax1.plot(frames, raw_z, linestyle='--', label="Raw Z")
 ax1.plot(frames, smooth_z, label="Smoothed Z")
 ax1.set_xlabel("Frame")
-ax1.set_ylabel("Rotation Z (rad)")
-ax1.set_title("Adaptive Confidence Smoothing (Z Axis)")
+ax1.set_ylabel("Translation Z (m)")
+ax1.set_title("Adaptive Velocity-Confidence Smoothing (Z Axis)")
 ax1.legend(loc="upper left")
 
 # ---- Confidence (secondary axis) ----
@@ -36,3 +36,28 @@ ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right")
 
 plt.tight_layout()
 plt.show()
+
+import numpy as np
+
+# Convert to numpy arrays
+raw_z = np.array(raw_z)
+smooth_z = np.array(smooth_z)
+
+# ---- Standard Deviation ----
+sigma_raw = np.std(raw_z)
+sigma_smoothed = np.std(smooth_z)
+
+# ---- Maximum Absolute Consecutive Change ----
+delta_raw = np.max(np.abs(np.diff(raw_z)))
+delta_smoothed = np.max(np.abs(np.diff(smooth_z)))
+
+print(f"σ_raw = {sigma_raw:.6f}")
+print(f"σ_smoothed = {sigma_smoothed:.6f}")
+print(f"Δ_max, raw = {delta_raw:.6f}")
+print(f"Δ_max, smoothed = {delta_smoothed:.6f}")
+
+std_reduction = (1 - sigma_smoothed / sigma_raw) * 100
+delta_reduction = (1 - delta_smoothed / delta_raw) * 100
+
+print(f"Std reduction: {std_reduction:.2f}%")
+print(f"Max step reduction: {delta_reduction:.2f}%")

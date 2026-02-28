@@ -269,10 +269,11 @@ export const MotionCaptureScene = forwardRef(function Scene({ isRecording, hasRe
     const parentWorldQuat = new THREE.Quaternion();
     parent.getWorldQuaternion(parentWorldQuat);
 
-    const correctionLocal = new THREE.Vector3(0, correctionWorldY, 0)
+    const speed = 0.8; // adjust as needed for responsiveness
+
+    const correctionLocal = new THREE.Vector3(0, correctionWorldY * speed, 0)
       .applyQuaternion(parentWorldQuat.clone().invert());
 
-    // --- APPLY AS SET, NOT ADD ---
     hips.position.add(correctionLocal);
 
     const hip = pose[0];
