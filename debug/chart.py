@@ -148,6 +148,36 @@ def hybrid_filter(positions, confidences,
 novel_filter = hybrid_filter(raw_z, confidence, 0.1, 0.5, 10, 0.7)
 
 
+import statistics
+
+def compute_metrics(signal):
+    # Standard deviation
+    std_dev = statistics.stdev(signal)
+
+    # Frame-to-frame absolute differences
+    diffs = [abs(signal[i] - signal[i-1]) for i in range(1, len(signal))]
+
+    # Maximum step change
+    max_step = max(diffs)
+
+    return std_dev, max_step
+
+raw_std, raw_max = compute_metrics(raw_z)
+euro_std, euro_max = compute_metrics(one_euro_z)
+conf_std, conf_max = compute_metrics(conf_weighted_z)
+hybrid_std, hybrid_max = compute_metrics(novel_filter)
+
+def to_percent(value, baseline):
+    return (value / baseline) * 100
+
+def improvement(value, baseline):
+    return (1 - value / baseline) * 100
+
+print("\n=== Improvement vs Raw ===")
+
+print(f"One Euro         | Std ↓ {improvement(euro_std, raw_std):.1f}% | Max Step ↓ {improvement(euro_max, raw_max):.1f}%")
+print(f"Confidence       | Std ↓ {improvement(conf_std, raw_std):.1f}% | Max Step ↓ {improvement(conf_max, raw_max):.1f}%")
+print(f"Hybrid (Ours)    | Std ↓ {improvement(hybrid_std, raw_std):.1f}% | Max Step ↓ {improvement(hybrid_max, raw_max):.1f}%")
 # ---- Create 4 stacked plots ----
 fig, axs = plt.subplots(4, 1, figsize=(10, 10), sharex=True)
 
@@ -185,3 +215,4 @@ axs[3].set_xlabel("Frame")
 
 plt.tight_layout()
 plt.show()
+
